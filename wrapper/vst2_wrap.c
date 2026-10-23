@@ -68,6 +68,12 @@ static inline void ftz_restore(uint64_t saved) {
                                  * meters; value-driven widgets (picture, meter) still move. Text readouts then redraw only on an
                                  * UpdateDisplay from elsewhere (a preset pick): show live numbers as pictures. */
 #endif
+#ifndef ON_NO_UPDATE_PREFIX
+/* (local, Chord Seq) a key prefix, e.g. "ph_": a list tile whose key starts with it reports a lit-state change by
+ * audioMasterAutomate only, with no UpdateDisplay. MPC answers every UpdateDisplay by re-listing the programs, which
+ * restarts its PRESET drawer; a playhead that lights a tile each beat would do that each beat. Unset: every lit change
+ * also asks for an UpdateDisplay, as before. */
+#endif
 #ifndef PARAM_TEXT_MAX
 #define PARAM_TEXT_MAX 24 /* value text length handed to the host, NUL included. The VST2 spec says 8, JUCE's buffer is
                            * bigger; ports that show sentences (status lines) raise it via vst.json "defines" */
@@ -638,6 +644,9 @@ static void housekeeping(AEffect *e, int32_t n) {
                 if (w->last_on[i] != on + 1) {
                     w->last_on[i] = (signed char)(on + 1);
                     w->master(&w->fx, audioMasterAutomate, i, 0, 0, (float)on);
+#ifdef ON_NO_UPDATE_PREFIX
+                    if (strncmp(PARAMS[i].key, ON_NO_UPDATE_PREFIX, sizeof ON_NO_UPDATE_PREFIX - 1))
+#endif
                     w->need_update_display = 1;
                 }
             } else {
