@@ -74,6 +74,12 @@ static inline void ftz_restore(uint64_t saved) {
  * restarts its PRESET drawer; a playhead that lights a tile each beat would do that each beat. Unset: every lit change
  * also asks for an UpdateDisplay, as before. */
 #endif
+#ifndef LIT_UPDATE_ON_TEXT_POLL
+#define LIT_UPDATE_ON_TEXT_POLL 0 /* (local, Chord Seq) 1: the UpdateDisplay a lit-state or polled-text change asks for waits
+                                   * for the next 100 ms tick, so lit tiles and texts that change together (a bar line) cost
+                                   * MPC one UpdateDisplay, even though the text poll is spread over blocks: each one restarts
+                                   * MPC's PRESET drawer. */
+#endif
 #ifndef PARAM_TEXT_MAX
 #define PARAM_TEXT_MAX 24 /* value text length handed to the host, NUL included. The VST2 spec says 8, JUCE's buffer is
                            * bigger; ports that show sentences (status lines) raise it via vst.json "defines" */
@@ -191,6 +197,7 @@ typedef struct {
     int playing;             /* HAS_TRANSPORT: last transport state sent */
     double ppq;              /* HAS_TRANSPORT: song position at the last block, to spot a jump back */
     volatile char need_update_display;  /* deferred audioMasterUpdateDisplay -- see setParameter() */
+    char lit_pending;        /* LIT_UPDATE_ON_TEXT_POLL: a lit or text change waits for the next 100 ms tick's UpdateDisplay */
     float pend0, pend0_from;  /* a host set of parameter 0 not applied yet, and where parameter 0 was before it */
     int has_pend0;            /* (see setParameter) */
     char last_rev[16];       /* HAS_DISPLAY_REV: the "display_rev" last seen */
@@ -647,7 +654,7 @@ static void housekeeping(AEffect *e, int32_t n) {
 #ifdef ON_NO_UPDATE_PREFIX
                     if (strncmp(PARAMS[i].key, ON_NO_UPDATE_PREFIX, sizeof ON_NO_UPDATE_PREFIX - 1))
 #endif
-                    w->need_update_display = 1;
+                    { if (LIT_UPDATE_ON_TEXT_POLL) w->lit_pending = 1; else w->need_update_display = 1; }
                 }
             } else {
                 w->last_on[i] = -1;
@@ -663,11 +670,13 @@ static void housekeeping(AEffect *e, int32_t n) {
                 for (const char *c = b2; *c; c++) h = (h ^ (unsigned char)*c) * 16777619u;
                 if (h != w->last_text[i]) {
                     w->last_text[i] = h;
-                    w->need_update_display = 1;
+                    if (LIT_UPDATE_ON_TEXT_POLL) w->lit_pending = 1; else w->need_update_display = 1;
                 }
             }
         }
     }
+    /* LIT_UPDATE_ON_TEXT_POLL: lit and text changes seen since the last 100 ms tick ask for one UpdateDisplay together */
+    if (LIT_UPDATE_ON_TEXT_POLL && poll_rev && w->lit_pending) { w->lit_pending = 0; w->need_update_display = 1; }
 #ifndef DISPLAY_REV_THREAD
     if (HAS_DISPLAY_REV && poll_rev) rev_scan(w);
 #else
