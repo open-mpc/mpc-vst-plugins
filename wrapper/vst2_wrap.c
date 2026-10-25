@@ -80,6 +80,12 @@ static inline void ftz_restore(uint64_t saved) {
                                    * MPC one UpdateDisplay, even though the text poll is spread over blocks: each one restarts
                                    * MPC's PRESET drawer. */
 #endif
+#ifndef ECHO_GUARD_POLLED_ONLY
+#define ECHO_GUARD_POLLED_ONLY 0 /* (local, Chord Seq) 1: the list-tile echo guard in set_param_now skips "poll": false params.
+                                  * Only the "<key>_on" poll pushes an echo, and only that poll resets the guard, so an unpolled
+                                  * tile MPC reads back as 0 (one that never lights) sends 1 at every touch and acted on the first
+                                  * one only. Unset: every list tile is guarded, as before. */
+#endif
 #ifndef PARAM_TEXT_MAX
 #define PARAM_TEXT_MAX 24 /* value text length handed to the host, NUL included. The VST2 spec says 8, JUCE's buffer is
                            * bigger; ports that show sentences (status lines) raise it via vst.json "defines" */
@@ -439,7 +445,7 @@ static void set_param_now(AEffect *e, int32_t i, float n) {
      * setParameter from inside that. Feeding the echo back into the engine re-selects the
      * row that just turned off. A real tap already moved the host Toggle Switch; remember
      * that value so the next poll only corrects the previous row. */
-    if (p->string_display && w->last_on[i] >= 0) {
+    if (p->string_display && !(ECHO_GUARD_POLLED_ONLY && p->no_poll) && w->last_on[i] >= 0) {
         int on = n > 0.5f ? 1 : 0;
         if (w->last_on[i] == on + 1) return;
         w->last_on[i] = (signed char)(on + 1);
