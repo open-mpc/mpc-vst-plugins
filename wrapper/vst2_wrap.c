@@ -1025,8 +1025,11 @@ static intptr_t dispatcher(AEffect *e, int32_t op, int32_t idx, intptr_t v, void
     }
 }
 
+static pthread_once_t g_api_once = PTHREAD_ONCE_INIT;
+static void g_api_init(void) { g_api = mpc_engine(); }
+
 __attribute__((visibility("default"))) AEffect *VSTPluginMain(audioMasterCallback master) {
-    if (!g_api) g_api = mpc_engine();
+    pthread_once(&g_api_once, g_api_init);   /* one engine table, also when two instances are created on two threads at once */
     if (!g_api) return NULL;
 #ifdef PLUG_EFFECT
     if (!g_api->process) return NULL;   /* an effect port must provide process() */
