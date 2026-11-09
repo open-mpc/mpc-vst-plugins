@@ -9,6 +9,8 @@ T=$(mktemp -d); trap 'chmod -R u+w "$T"; rm -rf "$T"' EXIT
 fails=0
 ok() { echo "ok   $1"; }
 bad() { echo "FAIL $1"; fails=$((fails + 1)); }
+# The devices' BusyBox (1.36.1) has no head -c and no head -<N> (docs/NOTES.md, 2026-11-09); a full BusyBox or the host has.
+if grep -nE 'head +-c|head +-[0-9]' ./*.sh; then bad "the installer uses head -c or head -<N>"; else ok "no head -c or head -<N> in the installer"; fi
 elf() {   # elf <file> <class+data> <e_type> <e_machine>: the first 20 bytes of an ELF header, then padding
     printf "\\177ELF$2\\001\\000\\000\\000\\000\\000\\000\\000\\000\\000$3$4padding" > "$1"
 }
