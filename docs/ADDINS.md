@@ -175,9 +175,9 @@ listening on the network until `bind` is changed by hand.
 
 ### One address with one password: the gateway
 
-The `gateway` addin (jacob-sabella/mpc-addin-gateway) runs Caddy beside MPC as a single HTTPS address (port 443, user `mpc`,
-one password per device, certificates from a certificate authority the device makes itself) in front of the addins' web
-pages, so one tunnel, or `bind=0.0.0.0` on the gateway alone, reaches all of them while each addin keeps listening on
+The `gateway` addin (jacob-sabella/mpc-addin-gateway) runs Caddy beside MPC as a single HTTPS address (port 443, one login:
+`mpc` / `mpc` until changed on its Settings page, which edits all its settings; certificates from a certificate authority
+the device makes itself) in front of the addins' web pages, so one tunnel, or `bind=0.0.0.0` on the gateway alone, reaches all of them while each addin keeps listening on
 127.0.0.1. Its start page lists the addins that declare a web page (below), each marked running or not from the kernel's
 socket table. It never finds services any other way.
 
