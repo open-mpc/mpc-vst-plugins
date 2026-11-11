@@ -1003,6 +1003,13 @@ class BuildTest(Base):
         cat, _ = catalog_build.build([self.ENTRY], FakeGitHub({"acme/test-synth": []}, {}), os.path.join(self.tmp, "bar3"), set())
         self.assertEqual(cat["plugins"][0]["bar_missing"][0], "stable-release")
         self.assertNotIn("tested", cat["plugins"][0]["bar_missing"])
+        # a Gen2-only release has no Gen1 build: only the Gen2 test is asked for, and a Gen2 test meets it
+        v = {"channel": "stable", "yanked": False, "gen2": True, "gen2_only": True, "manifest": {"skin": "x"}, "cpu": None, "tested": []}
+        e = {**self.ENTRY, "screenshot": "https://x/s.png"}
+        self.assertNotIn("tested", catalog_build.bar_of(e, [v]))
+        self.assertIn("tested-gen2", catalog_build.bar_of(e, [v]))
+        v["tested"] = [{"version": "1.0.0", "device": "MPC Live III (Gen2)"}]
+        self.assertNotIn("tested-gen2", catalog_build.bar_of(e, [v]))
 
     def test_maintenance_record_and_bar(self):
         now = datetime.datetime(2026, 11, 9, tzinfo=datetime.timezone.utc)

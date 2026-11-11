@@ -279,7 +279,7 @@ def bar_of(entry, versions, maint=None):
         if live and "mpc-sample" in entry["devices"] and "sample" not in gens:
             out.append("tested-sample")
         return out
-    if live and "gen1" not in gens:
+    if live and not live[0].get("gen2_only") and "gen1" not in gens:   # a Gen2-only release has no Gen1 build to test
         out.append("tested")
     if live and live[0].get("gen2") and "gen2" not in gens:
         out.append("tested-gen2")

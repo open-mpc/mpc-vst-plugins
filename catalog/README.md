@@ -129,7 +129,7 @@ is hidden or demoted because of it. The items:
 - ship a native **skin** (instruments and effects)
 - run the **CPU bench** (`docs/BENCH.md`; `release.py` records the figure), and bring the CPU down if the verdict is FAIL
 - add a **`tested.json`** entry for your newest release (this is what makes a plugin Verified), and one on a Gen2 device if the release has
-  a Gen2 build
+  a Gen2 build (a Gen2-only plugin is asked for the Gen2 test only)
 
 ## Feed
 The site publishes `feed.xml` (Atom, newest 50 non-yanked releases). Members of a collection released on the same day are one entry.
