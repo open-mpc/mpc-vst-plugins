@@ -1,4 +1,4 @@
 { "id": "potentialwarp", "name": "PotentialWarp", "author": "PotentialBreaks", "repo": "PotentialBreakfast/mpc-vst-potentialwarp", "kind": "effect",
   "style": "glitch", "tags": ["stutter", "beat-repeat", "tape-stop", "half-time", "reverse", "gate", "breaks"], "license": "MIT",
   "summary": "Tempo-locked mangler in the spirit of Gross Beat: 16 one-tap patterns of half speed, tape stops, stutters and rolls, reverses, spinbacks and gates, locked to your beat. Edit any pattern step by step, roll a new one with the dice (mild to wild), or chain up to 8 patterns so it changes over a phrase.",
-  "screenshot": "https://raw.githubusercontent.com/PotentialBreakfast/mpc-vst-potentialwarp/be6153571916abc37230bdfd794e31feb8878e45/docs/images/potentialwarp.png" }
+  "screenshot": "https://raw.githubusercontent.com/PotentialBreakfast/mpc-vst-potentialwarp/b8ba755694cb16f4ab3a4121613b4cda64b9815f/docs/images/potentialwarp.png" }
