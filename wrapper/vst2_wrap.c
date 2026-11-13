@@ -91,6 +91,10 @@ static inline void ftz_restore(uint64_t saved) {
                                * any label match (as before #859). For an engine that answers every option with its index: with
                                * labels that are numbers ("1".."16"), the answer "9" would otherwise match the label "9" (index 8). */
 #endif
+#ifndef NO_ENGINE_CHANGED
+#define NO_ENGINE_CHANGED 0 /* (local, Cadenza) 1: no mpc_engine_changed hook (engine.h). Its weak undefined reference does not link
+                             * on Apple platforms (Mach-O), where an engine without the hook is built for macOS and iOS too. */
+#endif
 #ifndef PARAM_TEXT_MAX
 #define PARAM_TEXT_MAX 24 /* value text length handed to the host, NUL included. The VST2 spec says 8, JUCE's buffer is
                            * bigger; ports that show sentences (status lines) raise it via vst.json "defines" */
@@ -705,6 +709,7 @@ static void housekeeping(AEffect *e, int32_t n) {
     (void)poll_rev;
 #endif
     /* parameters the engine changed by itself (engine.h mpc_engine_changed): reported as a CC's are, just below */
+#if !NO_ENGINE_CHANGED
     if (mpc_engine_changed) {
         char key[64];
         pthread_mutex_lock(&w->lock);
@@ -718,6 +723,7 @@ static void housekeeping(AEffect *e, int32_t n) {
                 }
         pthread_mutex_unlock(&w->lock);
     }
+#endif
     if ((w->cc_report -= n) <= 0) {
         w->cc_report = 1024;
         for (int i = 0; i < NPARAMS; i++)
