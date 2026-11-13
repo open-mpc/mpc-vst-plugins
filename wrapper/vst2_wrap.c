@@ -75,16 +75,21 @@ static inline void ftz_restore(uint64_t saved) {
  * also asks for an UpdateDisplay, as before. */
 #endif
 #ifndef LIT_UPDATE_ON_TEXT_POLL
-#define LIT_UPDATE_ON_TEXT_POLL 0 /* (local, Chord Seq) 1: the UpdateDisplay a lit-state or polled-text change asks for waits
-                                   * for the next 100 ms tick, so lit tiles and texts that change together (a bar line) cost
-                                   * MPC one UpdateDisplay, even though the text poll is spread over blocks: each one restarts
-                                   * MPC's PRESET drawer. */
+#define LIT_UPDATE_ON_TEXT_POLL 0 /* (local, Chord Seq) 1: the UpdateDisplay a lit-state, polled-text or display_rev change asks
+                                   * for waits 100 ms from the first such change, so lit tiles, texts and a display_rev that change
+                                   * together (a bar line) cost MPC one UpdateDisplay, though the polls read them at different
+                                   * blocks: each one restarts MPC's PRESET drawer. Not with DISPLAY_REV_THREAD. */
 #endif
 #ifndef ECHO_GUARD_POLLED_ONLY
 #define ECHO_GUARD_POLLED_ONLY 0 /* (local, Chord Seq) 1: the list-tile echo guard in set_param_now skips "poll": false params.
                                   * Only the "<key>_on" poll pushes an echo, and only that poll resets the guard, so an unpolled
                                   * tile MPC reads back as 0 (one that never lights) sends 1 at every touch and acted on the first
                                   * one only. Unset: every list tile is guarded, as before. */
+#endif
+#ifndef OPTION_ANSWER_INDEX
+#define OPTION_ANSWER_INDEX 0 /* (local, Cadenza) 1: a fully numeric answer for an option param is the option's index, before
+                               * any label match (as before #859). For an engine that answers every option with its index: with
+                               * labels that are numbers ("1".."16"), the answer "9" would otherwise match the label "9" (index 8). */
 #endif
 #ifndef PARAM_TEXT_MAX
 #define PARAM_TEXT_MAX 24 /* value text length handed to the host, NUL included. The VST2 spec says 8, JUCE's buffer is
@@ -203,7 +208,8 @@ typedef struct {
     int playing;             /* HAS_TRANSPORT: last transport state sent */
     double ppq;              /* HAS_TRANSPORT: song position at the last block, to spot a jump back */
     volatile char need_update_display;  /* deferred audioMasterUpdateDisplay -- see setParameter() */
-    char lit_pending;        /* LIT_UPDATE_ON_TEXT_POLL: a lit or text change waits for the next 100 ms tick's UpdateDisplay */
+    char lit_pending;        /* LIT_UPDATE_ON_TEXT_POLL: a lit or text change waits for one UpdateDisplay ... */
+    int lit_wait;            /* ... in this many frames: 100 ms after the first, so every cell that changed with it was read */
     float pend0, pend0_from;  /* a host set of parameter 0 not applied yet, and where parameter 0 was before it */
     int has_pend0;            /* (see setParameter) */
     char last_rev[16];       /* HAS_DISPLAY_REV: the "display_rev" last seen */
@@ -275,13 +281,18 @@ static void norm_to_str(const param_t *p, float n, char *buf, int len) {
 static float str_to_norm(const param_t *p, const char *s) {
     if (p->nopts) {
         int idx = -1;
+        if (OPTION_ANSWER_INDEX) {
+            char *end = NULL;
+            const long v = strtol(s, &end, 10);
+            if (end && end != s && *end == 0) idx = (int)v;
+        }
         /* An exact label match comes first, even when the label starts with a digit: option
          * lists like {"1/32","1/16","1/8"} or {"201","202"} used to be parsed as numbers
          * (atoi("1/16") == 1), so the host read back the wrong option and the control snapped
          * back (mpc-vst-tape-echo, device 2026-10-31). Only a fully numeric answer is taken as
          * the engine's own index. */
-        for (int i = 0; i < p->nopts; i++)
-            if (!strcasecmp(s, p->opts[i])) { idx = i; break; }
+        for (int i = 0; i < p->nopts && idx < 0; i++)
+            if (!strcasecmp(s, p->opts[i])) idx = i;
         if (idx < 0) {
             char *end = NULL;
             const long v = strtol(s, &end, 10);
@@ -582,6 +593,10 @@ static void render_events(wrap_t *w, float **out, int32_t n, int accumulate) {
 }
 #endif
 
+static void lit_hold(wrap_t *w) {   /* LIT_UPDATE_ON_TEXT_POLL (not with DISPLAY_REV_THREAD: not atomic) */
+    if (!w->lit_pending) { w->lit_pending = 1; w->lit_wait = 4410; }
+}
+
 /* HAS_DISPLAY_REV: when the engine's "display_rev" moved, report every param whose value changed, so the host moves controls
  * and re-evaluates IndexedEnabling (when= panels), not only text. Each report is an audioMasterAutomate, which MPC handles
  * synchronously and which can wait on its UI thread: a plugin whose display_rev moves all the time (meters) stalled MPC's
@@ -591,7 +606,7 @@ static void rev_scan(wrap_t *w) {
     char rev[16];
     if (eng_get(w, "display_rev", rev, sizeof rev) > 0 && strcmp(rev, w->last_rev)) {
         snprintf(w->last_rev, sizeof w->last_rev, "%s", rev);
-        if (!DISPLAY_REV_NO_UPDATE) w->need_update_display = 1;
+        if (!DISPLAY_REV_NO_UPDATE) { if (LIT_UPDATE_ON_TEXT_POLL) lit_hold(w); else w->need_update_display = 1; }
         for (int i = 0; i < NPARAMS; i++) {
             if (PARAMS[i].momentary || popup_is(i) || PARAMS[i].string_display) continue;
             float v = get_norm(w, i);
@@ -660,7 +675,7 @@ static void housekeeping(AEffect *e, int32_t n) {
 #ifdef ON_NO_UPDATE_PREFIX
                     if (strncmp(PARAMS[i].key, ON_NO_UPDATE_PREFIX, sizeof ON_NO_UPDATE_PREFIX - 1))
 #endif
-                    { if (LIT_UPDATE_ON_TEXT_POLL) w->lit_pending = 1; else w->need_update_display = 1; }
+                    { if (LIT_UPDATE_ON_TEXT_POLL) lit_hold(w); else w->need_update_display = 1; }
                 }
             } else {
                 w->last_on[i] = -1;
@@ -676,13 +691,14 @@ static void housekeeping(AEffect *e, int32_t n) {
                 for (const char *c = b2; *c; c++) h = (h ^ (unsigned char)*c) * 16777619u;
                 if (h != w->last_text[i]) {
                     w->last_text[i] = h;
-                    if (LIT_UPDATE_ON_TEXT_POLL) w->lit_pending = 1; else w->need_update_display = 1;
+                    if (LIT_UPDATE_ON_TEXT_POLL) lit_hold(w); else w->need_update_display = 1;
                 }
             }
         }
     }
-    /* LIT_UPDATE_ON_TEXT_POLL: lit and text changes seen since the last 100 ms tick ask for one UpdateDisplay together */
-    if (LIT_UPDATE_ON_TEXT_POLL && poll_rev && w->lit_pending) { w->lit_pending = 0; w->need_update_display = 1; }
+    /* LIT_UPDATE_ON_TEXT_POLL: lit and text changes ask for one UpdateDisplay together, 100 ms after the first of them: the
+     * text poll is spread over the blocks, so cells that changed at the same moment are read up to 100 ms apart */
+    if (LIT_UPDATE_ON_TEXT_POLL && w->lit_pending && (w->lit_wait -= n) <= 0) { w->lit_pending = 0; w->need_update_display = 1; }
 #ifndef DISPLAY_REV_THREAD
     if (HAS_DISPLAY_REV && poll_rev) rev_scan(w);
 #else
