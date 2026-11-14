@@ -63,7 +63,7 @@
     {
       "id": "mpc-tools",
       "title": "MPC TOOLS",
-      "summary": "One window for a standalone MPC on your computer: see and control the MPC's screen, browse and move its files, put computer folders into the MPC's browser, save the last 60 seconds of audio, and a Plugins tab that checks versions, updates plugins from their GitHub releases (with a backup), restarts the MPC app and benches CPU load on the device. Connects over SSH.",
+      "summary": "One window for a standalone MPC on your computer: see and control the MPC's screen, browse and move its files, put computer folders into the MPC's browser, save the last 60 seconds of audio, and bench CPU load. Its Plugins tab checks versions and updates plugins from their GitHub releases (with a backup), which writes to the device and restarts the MPC app: save your project first. Connects over root SSH.",
       "author": "PotentialBreaks",
       "screenshot": "https://raw.githubusercontent.com/PotentialBreakfast/mpc-tools/main/docs/images/mpc-tools-files.png",
       "license": "MIT",
