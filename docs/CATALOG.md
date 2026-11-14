@@ -73,6 +73,10 @@ optional `https://` `screenshot`; each member entry adds `"collection": "<id>"`.
 checks, `tested.json` tier, uid and download; `catalog.tsv`, the installer and `catalog_check.py` do not know about collections.
 - **Rules** (`catalog_build.py`, `load_collections`): the collection file must exist, every member's `repo` must equal the collection's, a
   collection needs at least 2 members, and its `summary` has the plugin limit (350 characters).
+- **Suites across repos (2026-11-14, offline; `test_a_suite_spans_one_authors_repos`):** an optional `repos` list lets one author's
+  plugins kept one per repo form a collection. A member's `repo` may be the collection's `repo` or one listed in `repos`; a member from
+  `repos` must have the collection's `author`, so the list cannot pull in someone else's plugin. `catalog.json` carries `repos` on the
+  collection. Nothing changes for installers, `catalog.tsv` or the per-repo N-entry rule.
 - **N-entry rule (N = 5, `MAX_UNCOLLECTED`):** more than 5 entries sharing a `repo` **and `author`** without a `collection` fails
   `--check-registry`, and so CI. Counted per author so that a repo hosting a few ports credited to different authors is left alone:
   `sd88me/mpc-vst-TR-MPC` lists 4 drum machines by athousanddetails beside 2 plugins by sd88me, which are not one set and stay separate

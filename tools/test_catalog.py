@@ -1472,6 +1472,31 @@ class CollectionTest(Base):
         self.assertTrue(problems[0][0].endswith("pack-2.json") and "one repo's entries" in problems[0][1], problems)
         self.assertIn("acme-pack", cols)   # still two good members
 
+    def test_a_suite_spans_one_authors_repos(self):
+        """A collection with "repos": one author's plugins kept in several repos (a suite), each member with its own repo."""
+        suite = dict(self.COL, repos=["acme/one", "acme/two"])
+        self.assertEqual(catalog_build.check_collection(suite, "x/acme-pack.json"), [])
+        for bad in (dict(self.COL, repos=[]), dict(self.COL, repos="acme/one"), dict(self.COL, repos=["acme"]),
+                    dict(self.COL, repos=["acme/one", "ACME/one"]), dict(self.COL, repos=["acme/pack"])):
+            self.assertTrue(catalog_build.check_collection(bad), bad)
+        one, two = dict(self.entry(0, collection="acme-pack"), repo="acme/one"), dict(self.entry(1, collection="acme-pack"), repo="acme/two")
+        home = self.entry(2, collection="acme-pack")
+        cols, problems = self.write([one, two, home], [suite])
+        self.assertEqual((sorted(cols), problems), (["acme-pack"], []))
+        # another author's plugin can't join a suite through "repos"
+        stranger = dict(self.entry(3, collection="acme-pack"), repo="acme/two", author="B")
+        cols, problems = self.write([one, two, stranger], [suite])
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("one author's repos", problems[0][1])
+        # a repo not in the list is still refused
+        cols, problems = self.write([one, two, dict(self.entry(4, collection="acme-pack"), repo="acme/three")], [suite])
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("one repo's entries", problems[0][1])
+        # the built catalog keeps the members' link and lists the suite's repos
+        plugins = [dict(id=e["id"], name=e["name"], kind="instrument", tier="listed", collection="acme-pack") for e in (one, two)]
+        out = catalog_build.collections_of(plugins, {"acme-pack": suite})
+        self.assertEqual((out[0]["members"], out[0]["repos"]), (["pack-0", "pack-1"], ["acme/one", "acme/two"]))
+
     def test_a_collection_needs_two_members(self):
         for n in (0, 1):
             cols, problems = self.write([self.entry(i, collection="acme-pack") for i in range(n)], [self.COL])

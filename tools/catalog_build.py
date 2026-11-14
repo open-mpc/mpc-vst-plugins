@@ -16,7 +16,8 @@ the user's own firmware) has no download: versions are the repo's vX.Y.Z git tag
 declared build script. A GitHub release that carries a *-mpc-armv7.zip asset is reported loudly (it would break the
 licence position). No zip is fetched or validated.
 
-Collections (catalog/collections/<id>.json): several entries from one repo shown as one card on the site. A member entry sets
+Collections (catalog/collections/<id>.json): several entries from one repo (or, with "repos", one author's several repos: a suite)
+shown as one card on the site. A member entry sets
 "collection": "<id>"; it keeps its own release, versions, checks and tier. More than MAX_UNCOLLECTED entries from one repo by one
 author without a collection is a registry error. catalog.json gets a collections[] list (members, kind counts, best tier, total downloads).
 
@@ -402,7 +403,13 @@ def check_collection(c, fname=None):
                  % (len(c["summary"]), MAX_SUMMARY))
     if "screenshot" in c and not (isinstance(c["screenshot"], str) and c["screenshot"].startswith("https://")):
         p.append("screenshot must be an https:// link")
-    extra = sorted(set(c) - set(COLLECTION_FIELDS) - {"screenshot"})
+    if "repos" in c:   # a suite: one author's plugins kept in several repos (each member still has its own repo and releases)
+        rs = c["repos"]
+        if not (isinstance(rs, list) and rs and all(isinstance(r, str) and REPO.fullmatch(r) for r in rs)):
+            p.append("repos must be a list of owner/name")
+        elif len({r.lower() for r in rs} | {c["repo"].lower()}) != len(rs) + 1:
+            p.append("repos must not repeat a repo (nor the collection's own repo)")
+    extra = sorted(set(c) - set(COLLECTION_FIELDS) - {"screenshot", "repos"})
     if extra:
         p.append("unknown field%s %s" % ("s" if len(extra) > 1 else "", ", ".join(extra)))
     return p
@@ -410,7 +417,8 @@ def check_collection(c, fname=None):
 
 def load_collections(path, entries, registry=None):
     """-> ({id: collection}, problems [(file, message)]). Reads catalog/collections/*.json and checks them against the registry
-    entries: each member's collection exists and has the member's repo, each collection has at least two members, and no repo
+    entries: each member's collection exists and has the member's repo (its "repo", or one of its "repos" for a suite, whose members
+    must then have the collection's author), each collection has at least two members, and no repo
     lists more than MAX_UNCOLLECTED entries by one author without a collection. Counting per author leaves alone a repo that hosts
     a few ports credited to different authors (sd88me/mpc-vst-TR-MPC: four drum machines by athousanddetails beside its own kit
     and FX), and still catches one author flooding the grid. A member whose collection is broken keeps its own listing
@@ -438,9 +446,12 @@ def load_collections(path, entries, registry=None):
         c = cols.get(cid)
         if not c:
             problems.append((efile(e), "collection %r has no file catalog/collections/%s.json" % (cid, cid)))
-        elif c["repo"].lower() != e["repo"].lower():
-            problems.append((efile(e), "collection %r is for repo %s, this entry's repo is %s: a collection holds one repo's entries"
-                             % (cid, c["repo"], e["repo"])))
+        elif e["repo"].lower() != c["repo"].lower() and e["repo"].lower() not in {r.lower() for r in c.get("repos", [])}:
+            problems.append((efile(e), "collection %r is for repo %s, this entry's repo is %s: a collection holds one repo's entries "
+                             "(a suite lists its other repos in \"repos\")" % (cid, c["repo"], e["repo"])))
+        elif e["repo"].lower() != c["repo"].lower() and e["author"].strip().lower() != c["author"].strip().lower():
+            problems.append((efile(e), "collection %r is %s's suite, this entry is by %s: a suite holds one author's repos"
+                             % (cid, c["author"], e["author"])))
         else:
             members.setdefault(cid, []).append(e["id"])
     for cid, c in sorted(cols.items()):
@@ -479,6 +490,8 @@ def collections_of(plugins, collections):
         item = {k: c[k] for k in COLLECTION_FIELDS}
         if c.get("screenshot"):
             item["screenshot"] = c["screenshot"]
+        if c.get("repos"):
+            item["repos"] = list(c["repos"])
         item.update({
             "members": [p["id"] for p in mem],
             "kinds": kinds,
@@ -924,7 +937,7 @@ def build(entries, src, cache, yanked, keep=10, now=None, require_portable=(), a
             if e.get(k):
                 item[k] = e[k]
         col = (collections or {}).get(e.get("collection"))
-        if col and col["repo"].lower() == e["repo"].lower():
+        if col and e["repo"].lower() in {col["repo"].lower()} | {r.lower() for r in col.get("repos", [])}:
             item["collection"] = e["collection"]
         item["tags"] = e.get("tags", [])
         item["source_available"] = bool(e.get("source_available"))

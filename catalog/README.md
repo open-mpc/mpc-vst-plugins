@@ -45,6 +45,15 @@ credited to different authors are counted separately, so a repo that hosts a few
 2. Add `"collection": "my-pack"` to each member's `catalog/plugins/<id>.json`. Every member must have the collection's `repo`, and a
    collection needs at least 2 members. Nothing else changes: each member keeps its own release, versions, checks, tier and download.
 
+**A suite kept in several repos** (one repo per plugin, by one author): add `"repos"` to the collection file, listing the members'
+repos; `repo` stays the suite's home (a README or overview repo, used for the Source link) and may itself hold no plugin:
+```json
+{ "id": "my-suite", "title": "My Suite", "author": "Your name", "repo": "you/my-suite",
+  "repos": ["you/mpc-vst-one", "you/mpc-vst-two"], "summary": "One line about the set." }
+```
+Each member's `repo` must be `repo` or one of `repos`, and every member must have the collection's `author`. People can still pick
+single members from the collection view, as with any collection.
+
 The card shows the collection's screenshot (or a collage of the members'), how many instruments and effects it holds, and the first few
 members; View all opens a list grouped by kind where people tick members (or Pick all) for the install list. The collection appears under
 each tab its members cover, sorted by its best member tier and its most downloaded member. A release that updates several members on one day is one
