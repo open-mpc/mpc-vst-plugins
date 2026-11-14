@@ -82,11 +82,12 @@ with sync_playwright() as p:
     # Gen2 (docs/GEN2.md): the badge, the filter and the two download buttons come from the version's gen2 flag and assets{}
     pg.goto(URL)
     check("device filter exists", pg.locator("#f-gen").count() == 1)
-    gen2_cards = pg.locator("#grid article.card:has(.tag.gen)").count()
+    GEN2_ON = ".compatrow .tag.compat.on:has-text('Gen2')"   # the Gen2 pill is lit when the newest release has a Gen2 build
+    gen2_cards = pg.locator("#grid article.card:has(%s)" % GEN2_ON).count()
     for val, want in (("gen2", True), ("gen1", False)):
         pg.select_option("#f-gen", val)
         cards = pg.locator("#grid article.card")
-        wrong = [i for i in range(cards.count()) if (cards.nth(i).locator(".tag.gen").count() == 1) != want]
+        wrong = [i for i in range(cards.count()) if (cards.nth(i).locator(GEN2_ON).count() == 1) != want]
         check("device filter %s shows only the matching cards" % val, not wrong, str(wrong))
         if val == "gen2":
             check("the Gen2 filter shows the cards that have the badge", cards.count() == gen2_cards, "%d vs %d" % (cards.count(), gen2_cards))
