@@ -1,0 +1,4 @@
+{ "id": "tidal-verb", "name": "Tidal Verb", "author": "Fullban", "repo": "fullbann/tidal-verb",
+  "kind": "effect", "style": "reverb", "tags": ["reverb", "shimmer", "ambient", "stereo"], "license": "MIT",
+  "summary": "Stereo reverb with ten types, from Room and Hall to a dark swirling Abyss and a cascading-octave shimmer. Decay, Liveliness, Swirl, Warmth and Air controls, eleven presets, deep-sea touchscreen skin.",
+  "screenshot": "https://raw.githubusercontent.com/fullbann/tidal-verb/v1.0.0/docs/catalog-thumbnail.png" }
