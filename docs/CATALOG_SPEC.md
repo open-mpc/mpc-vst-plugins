@@ -99,7 +99,7 @@ No version fields: they are read from the releases (or, for `build-yourself`, th
 `depends` and `conflicts` (optional, release entries only) are the fallback for releases whose manifest has no such key: a maintainer can
 declare a dependency the author's zips don't, without a new release ("Dependencies" below).
 `previous_repos` is optional: a list of other `owner/name` repos that hold this plugin's older releases (a plugin that moved repo). Their releases are read too (each checked against the repo its manifest names), so the version history and the download count carry over; a tag already in `repo` wins. Works for me reports and likes are keyed by `id`, so they carry over anyway.
-`collection` is optional: the id of a `collections/<id>.json` with the same `repo` (below).
+`collection` is optional: the id of a `collections/<id>.json` with the same `repo`, or one of its `repos` (below).
 
 ### Collections: `collections/<id>.json` (2026-11-02, live)
 ```json
@@ -111,6 +111,10 @@ release, versions, checks, tier, uid and download). Rules (`catalog_build.py`): 
 equals the collection's, at least 2 members, `summary` at most 350 characters, no other fields. More than 5 entries sharing a `repo` and
 `author` without a `collection` is a registry error (per author, so a repo hosting ports credited to different authors is not forced
 into one).
+
+`repos` is optional (2026-11-14, offline): a suite kept in several repos by one author, `["owner/name", ...]`, none repeated and not
+the collection's own `repo`. A member's `repo` may then be the collection's `repo` or one of `repos`, and a member from `repos` must
+have the collection's `author`. `repo` stays the suite's home for the Source link and need not hold a member.
 
 ### Build-yourself entries
 For a plugin that cannot publish a zip because the build embeds the user's own firmware. Schema 1 is unchanged: the
@@ -216,7 +220,7 @@ Every plugin also has `distribution`. For `build-yourself` plugins the record ca
 warnings, tested, notes: ""}`: no `url`, `size`, `sha256`, `param_compat` or `manifest`. Readers must treat those
 keys as absent for such entries (an installer must skip them: there is nothing to download).
 
-`collections` (2026-11-02, live; absent when there are none): `[{id, title, author, repo, summary, screenshot?, members, kinds, tier,
+`collections` (2026-11-02, live; absent when there are none): `[{id, title, author, repo, repos?, summary, screenshot?, members, kinds, tier,
 verified_on, downloads, updated, added}]`. `members` are plugin ids (by name), `kinds` a count per `kind`, `tier` the best member tier,
 `verified_on` the generations of its verified members, `downloads` the members' total, `updated` the newest member update and `added` the
 oldest member's. A member plugin carries `collection` (the id). The plugins themselves stay in `plugins` unchanged, so installers and
