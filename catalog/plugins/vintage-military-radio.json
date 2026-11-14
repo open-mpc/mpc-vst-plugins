@@ -1,0 +1,19 @@
+{
+  "id": "vintage-military-radio",
+  "name": "Vintage Military Radio",
+  "author": "Tropix R!X Crazy Jungle Sounds",
+  "repo": "vulnerablecodes/music-production",
+  "kind": "effect",
+  "license": "MIT",
+  "summary": "Eight stereo tape-performance circuits plus vinyl crackle, radio static, white/brown noise and mains hum.",
+  "style": "multi-effect",
+  "tags": [
+    "tape",
+    "lo-fi",
+    "multi-effect",
+    "noise",
+    "distortion"
+  ],
+  "screenshot": "https://raw.githubusercontent.com/vulnerablecodes/music-production/98bede711cbbf08f1a182055729273aab1d173f6/media/vintage-military-radio-current.jpg",
+  "asset_pattern": "Vintage-Military-Radio-*-mpc-armv7.zip"
+}
