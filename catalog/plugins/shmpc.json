@@ -12,7 +12,9 @@
     "emulation"
   ],
   "license": "AGPL-3.0-only",
-  "summary": "Roland SH-101 emulation (lemus-dev/lemus) as a mono synth; bring your own ROM.",
+  "summary": "Roland SH-101 emulation (Lemus core, ROM bring-your-own) as a Force/MPC OS plugin with sliders and sequencer. Offline build only: not yet tested on a Force.",
   "asset_pattern": "SHMPC-*-mpc-armv7.zip",
-  "collection": "emu-machines"
+  "collection": "emu-machines",
+  "screenshot": "https://raw.githubusercontent.com/sunskiefer/EMU/shmpc-v0.1.0/docs/screens/SHMPC.png",
+  "tier": "experimental"
 }

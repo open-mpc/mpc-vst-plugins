@@ -12,7 +12,9 @@
     "emulation"
   ],
   "license": "AGPL-3.0-only",
-  "summary": "Roland TR-808 emulation (lemus-dev/lemus) as a drum machine; bring your own ROM.",
+  "summary": "Roland TR-808 emulation (Lemus circuit solver, ROM bring-your-own) as a Force/MPC OS plugin. Offline build only: not tested on a Force, CPU use unmeasured and may be heavy.",
   "asset_pattern": "808MPC-*-mpc-armv7.zip",
-  "collection": "emu-machines"
+  "collection": "emu-machines",
+  "screenshot": "https://raw.githubusercontent.com/sunskiefer/EMU/808mpc-v0.1.0/docs/screens/808MPC.png",
+  "tier": "experimental"
 }

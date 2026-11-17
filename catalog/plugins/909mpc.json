@@ -12,7 +12,9 @@
     "emulation"
   ],
   "license": "AGPL-3.0-only",
-  "summary": "Roland TR-909 emulation (lemus-dev/lemus) as a drum machine; bring your own ROMs.",
+  "summary": "Roland TR-909 emulation (Lemus circuit solver, ROMs bring-your-own) as a Force/MPC OS plugin. Offline build only: not tested on a Force, CPU use unmeasured and may be heavy.",
   "asset_pattern": "909MPC-*-mpc-armv7.zip",
-  "collection": "emu-machines"
+  "collection": "emu-machines",
+  "screenshot": "https://raw.githubusercontent.com/sunskiefer/EMU/909mpc-v0.1.0/docs/screens/909MPC.png",
+  "tier": "experimental"
 }

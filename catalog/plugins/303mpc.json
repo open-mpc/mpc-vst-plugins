@@ -13,7 +13,9 @@
     "emulation"
   ],
   "license": "AGPL-3.0-only",
-  "summary": "Roland TB-303 emulation (lemus-dev/lemus) as an instrument; bring your own ROM.",
+  "summary": "Roland TB-303 emulation (Lemus core, ROM bring-your-own) as a Force/MPC OS plugin with its own sequencer. Offline build only: not yet tested on a Force.",
   "asset_pattern": "303MPC-*-mpc-armv7.zip",
-  "collection": "emu-machines"
+  "collection": "emu-machines",
+  "screenshot": "https://raw.githubusercontent.com/sunskiefer/EMU/303mpc-v0.1.0/docs/screens/303MPC.png",
+  "tier": "experimental"
 }

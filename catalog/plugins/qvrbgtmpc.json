@@ -12,7 +12,9 @@
     "emulation"
   ],
   "license": "AGPL-3.0-only",
-  "summary": "Alesis QuadraVerb GT multi-effect emulation (lemus-dev/lemus); bring your own firmware.",
+  "summary": "Alesis QuadraVerb GT multi-effect emulation (Lemus core, ROM bring-your-own) as a Force/MPC OS effect. Offline build only: generic hardware-style panel, not tested on a Force.",
   "asset_pattern": "QVRBGT-MPC-*-mpc-armv7.zip",
-  "collection": "emu-machines"
+  "collection": "emu-machines",
+  "screenshot": "https://raw.githubusercontent.com/sunskiefer/EMU/qvrbgtmpc-v0.1.0/docs/screens/QVRBGTMPC.png",
+  "tier": "experimental"
 }
