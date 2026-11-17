@@ -1,0 +1,6 @@
+{ "id": "thing4000", "name": "THING4000", "author": "L'Cronx", "repo": "sunskiefer/Tone3000MPC",
+  "kind": "effect", "style": "amp-sim", "tags": ["guitar", "amp", "nam", "neural", "cab", "ir", "pedal"],
+  "license": "PolyForm-Noncommercial-1.0.0", "source_available": true,
+  "summary": "Neural Amp Modeler (NAM A2) amps and pedals plus IR cabs in a chain of blocks with EQ, gate and calibration. Load the .nam captures and .wav IRs you copied to the Force; it never uses the network.",
+  "screenshot": "https://raw.githubusercontent.com/sunskiefer/Tone3000MPC/v0.1.1/docs/img/chain.png",
+  "asset_pattern": "*-mpc-armv7.zip" }
