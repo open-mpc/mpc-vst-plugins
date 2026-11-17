@@ -1,0 +1,18 @@
+{
+  "id": "shmpc",
+  "name": "SHMPC",
+  "author": "L'Cronx",
+  "repo": "sunskiefer/EMU",
+  "kind": "instrument",
+  "style": "synth",
+  "tags": [
+    "roland",
+    "sh-101",
+    "mono",
+    "emulation"
+  ],
+  "license": "AGPL-3.0-only",
+  "summary": "Roland SH-101 emulation (lemus-dev/lemus) as a mono synth; bring your own ROM.",
+  "asset_pattern": "SHMPC-*-mpc-armv7.zip",
+  "collection": "emu-machines"
+}

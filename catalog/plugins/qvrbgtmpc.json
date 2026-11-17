@@ -1,0 +1,18 @@
+{
+  "id": "qvrbgtmpc",
+  "name": "QVRBGT MPC",
+  "author": "L'Cronx",
+  "repo": "sunskiefer/EMU",
+  "kind": "effect",
+  "style": "multi-effect",
+  "tags": [
+    "alesis",
+    "quadraverb",
+    "reverb",
+    "emulation"
+  ],
+  "license": "AGPL-3.0-only",
+  "summary": "Alesis QuadraVerb GT multi-effect emulation (lemus-dev/lemus); bring your own firmware.",
+  "asset_pattern": "QVRBGT-MPC-*-mpc-armv7.zip",
+  "collection": "emu-machines"
+}

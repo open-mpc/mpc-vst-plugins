@@ -1,0 +1,18 @@
+{
+  "id": "909mpc",
+  "name": "909MPC",
+  "author": "L'Cronx",
+  "repo": "sunskiefer/EMU",
+  "kind": "instrument",
+  "style": "drum-machine",
+  "tags": [
+    "roland",
+    "909",
+    "drums",
+    "emulation"
+  ],
+  "license": "AGPL-3.0-only",
+  "summary": "Roland TR-909 emulation (lemus-dev/lemus) as a drum machine; bring your own ROMs.",
+  "asset_pattern": "909MPC-*-mpc-armv7.zip",
+  "collection": "emu-machines"
+}

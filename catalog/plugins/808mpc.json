@@ -1,0 +1,18 @@
+{
+  "id": "808mpc",
+  "name": "808MPC",
+  "author": "L'Cronx",
+  "repo": "sunskiefer/EMU",
+  "kind": "instrument",
+  "style": "drum-machine",
+  "tags": [
+    "roland",
+    "808",
+    "drums",
+    "emulation"
+  ],
+  "license": "AGPL-3.0-only",
+  "summary": "Roland TR-808 emulation (lemus-dev/lemus) as a drum machine; bring your own ROM.",
+  "asset_pattern": "808MPC-*-mpc-armv7.zip",
+  "collection": "emu-machines"
+}

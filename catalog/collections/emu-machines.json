@@ -1,0 +1,7 @@
+{
+  "id": "emu-machines",
+  "title": "Emulated machines (lemus)",
+  "author": "L'Cronx",
+  "repo": "sunskiefer/EMU",
+  "summary": "TB-303, TR-808, TR-909, SH-101 and QuadraVerb GT emulations from lemus-dev/lemus for the Force / MPC OS. Bring your own ROMs."
+}
