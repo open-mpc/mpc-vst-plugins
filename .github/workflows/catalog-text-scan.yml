@@ -1,7 +1,8 @@
 # Checks the zips the catalog lists for device-side text the MPC cannot read: CR line endings or a UTF-8 BOM, which stop
 # the device's sh and awk at the first line of code (a Windows-built package shipped exactly that once, see
 # docs/RELEASING.md). Weekly, after the nightly catalog build, and on demand. The job fails while a published package has
-# the problem, and both reports stay as an artifact, so a release built with an old copy of the tools shows up here.
+# the problem, and also when a package could not be read at all (exit 2: a network or API failure, not a defect), so a red
+# run never means "broken". Both reports stay as an artifact, so a release built with an old copy of the tools shows up.
 name: Catalog text scan
 
 on:
