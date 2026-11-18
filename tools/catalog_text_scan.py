@@ -2,6 +2,7 @@
 """Scan the zips the catalog lists for device-side text the MPC cannot read: CR line endings or a UTF-8 BOM.
 
   tools/catalog_text_scan.py [--registry catalog/plugins] [--jobs 8] [--json report.json] [--limit N] [--quiet]
+                             [--all-versions]
 
 The device's sh, awk and sha256sum stop at a CR ("Unexpected token") and read a BOM as part of the first line, and a
 package built on Windows shipped exactly that once (docs/RELEASING.md). tools/release.py and tools/release_addin.py
@@ -13,7 +14,8 @@ the newest release that ships a per-build zip (-mpc-armv7.zip / -mpc-aarch64.zip
 checks install.sh, uninstall.sh, plugin_list.awk, addin-lib.sh, addin.manifest, SHA256SUMS, MODES and every other
 .sh/.awk in the package. Only the zip's central directory and those members are fetched, over HTTP range requests:
 nothing is downloaded whole, nothing is written to the catalog. Addins and plugins are both covered; entries that
-build for themselves (no published zip) are skipped.
+build for themselves (no published zip) are skipped. --all-versions scans every release that ships a zip, not just
+the newest (slower, and useful once, to find the packages that predate the check).
 
 Exit status is 1 when a package has a problem, so a workflow can run it.
 """
@@ -99,8 +101,8 @@ def scan_asset(url):
     return problems
 
 
-def newest_packages(src, entry, cache):
-    """(release tag, [asset]) of the newest release that ships this entry's zips, or (None, [])."""
+def packages_of(src, entry, cache, all_versions=False):
+    """[(release tag, asset)] of the releases that ship this entry's zips: the newest one, or all of them."""
     repo = entry["repo"]
     if repo not in cache:
         try:
@@ -110,11 +112,14 @@ def newest_packages(src, entry, cache):
     rels = cache[repo]
     if isinstance(rels, Exception):
         raise rels
+    found = []
     for rel in rels:   # newest first
         assets = [a for a in rel.get("assets", []) if wanted(entry, a["name"])]
         if assets:
-            return rel.get("tag_name") or "", assets
-    return None, []
+            found.append((rel.get("tag_name") or "", assets))
+            if not all_versions:
+                break
+    return found
 
 
 def main():
@@ -124,6 +129,7 @@ def main():
     ap.add_argument("--limit", type=int, help="only the first N entries, for a quick look")
     ap.add_argument("--json", metavar="FILE", help="write the report as JSON")
     ap.add_argument("--quiet", action="store_true", help="only the problem list and the summary")
+    ap.add_argument("--all-versions", action="store_true", help="every release with a zip, not only the newest")
     a = ap.parse_args()
 
     entries, problems = load_registry(a.registry)
@@ -141,15 +147,16 @@ def main():
         if not a.quiet and (i % 25 == 0 or i == len(entries)):
             print("listing releases: %d/%d" % (i, len(entries)), file=sys.stderr, flush=True)
         try:
-            tag, assets = newest_packages(src, e, cache)
+            found = packages_of(src, e, cache, a.all_versions)
         except Exception as ex:
             skipped.append((e["id"], e.get("repo"), "cannot list releases: %s" % ex))
             continue
-        if not assets:
+        if not found:
             skipped.append((e["id"], e.get("repo"), "no release with a per-build zip"))
             continue
-        for asset in assets:
-            jobs.append((e, tag, asset))
+        for tag, assets in found:
+            for asset in assets:
+                jobs.append((e, tag, asset))
 
     print("checking %d packages from %d entries" % (len(jobs), len(entries)), file=sys.stderr, flush=True)
     report, lock = [], threading.Lock()
