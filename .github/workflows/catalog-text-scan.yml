@@ -13,6 +13,10 @@ on:
 permissions:
   contents: read
 
+concurrency:   # a manual run waits for the scheduled one instead of doubling the traffic
+  group: catalog-text-scan
+  cancel-in-progress: false
+
 jobs:
   scan:
     runs-on: ubuntu-latest

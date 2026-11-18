@@ -189,7 +189,9 @@ needed (Git Bash on Windows, or any POSIX shell).
 `tools/catalog_text_scan.py` reads the packages the catalog already lists (the newest release of every registry entry,
 addins included) and reports the device-side text in them; it fetches only each zip's central directory and those
 members over HTTP ranges, so a few hundred packages take seconds. It reads each package's manifest, so a version the
-catalog yanks (`catalog/yanked.json`) is counted separately and never as a problem. It exits 1 when a package has a
+catalog yanks (`catalog/yanked.json`) is counted separately and never as a problem; releases under `previous_repos`
+are scanned too and a draft release is not. Severity is `catalog_check.py`'s: the named device files at the top of
+a package are problems, a payload's own `.sh`/`.awk` is a warning. It exits 1 when a package has a
 device-text problem and 2 when a package or an entry could not be read (a dropped connection is not a defect: each zip
 is tried twice), so a failed run never claims a package is broken. Run it after a change to the release tools, or to
 find the packages that predate this check.

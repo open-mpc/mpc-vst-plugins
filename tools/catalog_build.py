@@ -544,7 +544,7 @@ class GitHub:
                                          headers=self.headers)
             with urllib.request.urlopen(req, timeout=60) as r:
                 chunk = json.load(r)
-            out += chunk
+            out += [r for r in chunk if not r.get("draft")]   # a draft is not a published version
             if len(chunk) < 100:
                 return out
             page += 1

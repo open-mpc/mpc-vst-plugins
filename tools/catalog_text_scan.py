@@ -19,6 +19,10 @@ the newest (slower, and useful once, to find the packages that predate the check
 yanks (catalog/yanked.json) is reported as yanked and never as a problem, so the scan asks for a re-release, not for a
 yank of something already pulled. --yanked "" checks those too.
 
+Severity follows tools/catalog_check.py: the named device files at the top of a package are problems (the device could
+not install), while a payload's own .sh/.awk is a warning (the plugin may never run it on the device). Releases under
+previous_repos are scanned too, and a draft release is not.
+
 Exit status is 1 when a package has a device-text problem and 2 when the run could not read something it should
 have (a network or API failure is not a defect), so a workflow can tell the two apart.
 """
@@ -93,15 +97,15 @@ def wanted(entry, name):
 
 
 def scan_asset(url, entry_id="", yanked=()):
-    """(version, problems, is_yanked) for one package. The version is the one in its manifest, which is exactly what
-    catalog/yanked.json keys on, so the scan skips what the catalog has already pulled."""
+    """(version, problems, warnings, is_yanked) for one package. The version is the one in its manifest, which is
+    exactly what catalog/yanked.json keys on, so the scan skips what the catalog has already pulled."""
     f = HttpFile(url)
     if f.size <= WHOLE_ZIP:   # most packages are small: one GET here beats a seek per member
         with urllib.request.urlopen(urllib.request.Request(f.url, headers=UA), timeout=300) as r:
             src = io.BytesIO(r.read())
     else:
         src = f
-    problems = []
+    problems, warnings = [], []
     with zipfile.ZipFile(src) as z:
         names = [n for n in z.namelist() if not n.endswith("/")]
         manifest = next((n for n in names if n.count("/") == 1 and n.endswith("/mpc-plugin.json")), None)
@@ -111,35 +115,43 @@ def scan_asset(url, entry_id="", yanked=()):
                 version = str(json.loads(z.read(manifest)).get("version") or "")
             except (ValueError, KeyError, TypeError):
                 version = ""
-        if version and entry_id and ("%s@%s" % (entry_id, version) in yanked or "%s@*" % entry_id in yanked):
-            return version, [], True
         for n in names:
             base = n.rsplit("/", 1)[-1]
-            if base in DEVICE_TEXT_FILES or base.lower().endswith((".sh", ".awk")):
+            if n.count("/") == 1 and base in DEVICE_TEXT_FILES:   # the root files the device runs: an error
                 problem = device_text_problems(n, z.read(n))
                 if problem:
                     problems.append(problem)
-    return version, problems, False
+            elif base.lower().endswith((".sh", ".awk")):          # a payload's own script: a warning, as in catalog_check
+                problem = device_text_problems(n, z.read(n))
+                if problem:
+                    warnings.append(problem)
+    pulled = bool(version and entry_id and ("%s@%s" % (entry_id, version) in yanked or "%s@*" % entry_id in yanked))
+    return version, problems, warnings, pulled
 
 
 def packages_of(src, entry, cache, all_versions=False):
-    """[(release tag, asset)] of the releases that ship this entry's zips: the newest one, or all of them."""
-    repo = entry["repo"]
-    if repo not in cache:
-        try:
-            cache[repo] = src.list_releases(repo)
-        except Exception as e:
-            cache[repo] = e
-    rels = cache[repo]
-    if isinstance(rels, Exception):
-        raise rels
-    found = []
-    for rel in rels:   # newest first
-        assets = [a for a in rel.get("assets", []) if wanted(entry, a["name"])]
-        if assets:
-            found.append((rel.get("tag_name") or "", assets))
-            if not all_versions:
-                break
+    """[(repo, release tag, assets)] of the releases that ship this entry's zips: the newest one, or all of them.
+    previous_repos (a plugin that moved) is read too; a tag the main repo is read from wins, as in the catalog build."""
+    found, seen = [], set()
+    for repo in [entry["repo"]] + [r for r in entry.get("previous_repos") or [] if r != entry["repo"]]:
+        if repo not in cache:
+            try:
+                cache[repo] = src.list_releases(repo)
+            except Exception as e:
+                cache[repo] = e
+        rels = cache[repo]
+        if isinstance(rels, Exception):
+            if repo == entry["repo"]:
+                raise rels
+            continue   # an old home that is gone: the main repo's releases are what matter
+        for rel in rels:   # newest first
+            assets = [a for a in rel.get("assets", []) if wanted(entry, a["name"])]
+            tag = rel.get("tag_name") or ""
+            if assets and tag not in seen:
+                seen.add(tag)
+                found.append((repo, tag, assets))
+                if not all_versions:
+                    break
     return found
 
 
@@ -185,20 +197,20 @@ def main():
         if not found:
             skipped.append((e["id"], e.get("repo"), "no release with a per-build zip"))
             continue
-        for tag, assets in found:
+        for repo, tag, assets in found:
             for asset in assets:
-                jobs.append((e, tag, asset))
+                jobs.append((e, repo, tag, asset))
 
     print("checking %d packages from %d entries" % (len(jobs), len(entries)), file=sys.stderr, flush=True)
     report, lock = [], threading.Lock()
     done = [0]
 
     def one(job):
-        e, tag, asset = job
-        version, found, pulled, error = "", [], False, ""
+        e, repo, tag, asset = job
+        version, found, warned, pulled, error = "", [], [], False, ""
         for attempt in (1, 2):   # a dropped connection is not a defect: try once more before calling it unreadable
             try:
-                version, found, pulled = scan_asset(asset["browser_download_url"], e["id"], yanked)
+                version, found, warned, pulled = scan_asset(asset["browser_download_url"], e["id"], yanked)
                 error = ""
                 break
             except Exception as ex:
@@ -209,9 +221,9 @@ def main():
             done[0] += 1
             if not a.quiet and done[0] % 25 == 0:
                 print("checked %d/%d" % (done[0], len(jobs)), file=sys.stderr, flush=True)
-        return {"id": e["id"], "kind": e.get("kind"), "repo": e["repo"], "tag": tag, "version": version,
-                "asset": asset["name"], "url": asset["browser_download_url"], "problems": found, "yanked": pulled,
-                "error": error}
+        return {"id": e["id"], "kind": e.get("kind"), "repo": repo, "tag": tag, "version": version,
+                "asset": asset["name"], "url": asset["browser_download_url"], "problems": found,
+                "warnings": warned, "yanked": pulled, "error": error}
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, a.jobs)) as ex:
         report = list(ex.map(one, jobs))
@@ -219,6 +231,7 @@ def main():
     pulled = [r for r in report if r["yanked"]]
     bad = [r for r in report if r["problems"] and not r["yanked"]]
     unreadable = [r for r in report if r["error"] and not r["yanked"]]
+    warned = [r for r in report if r["warnings"] and not r["yanked"]]
     for r in bad:
         print("PROBLEM %s (%s) %s %s" % (r["id"], r["kind"], r["repo"], r["asset"]))
         for p in r["problems"]:
@@ -226,6 +239,10 @@ def main():
     for r in unreadable:
         print("UNREADABLE %s (%s) %s %s" % (r["id"], r["kind"], r["repo"], r["asset"]))
         print("        " + r["error"])
+    for r in warned:
+        print("WARNING %s (%s) %s %s" % (r["id"], r["kind"], r["repo"], r["asset"]))
+        for w in r["warnings"]:
+            print("        " + w)
     for r in pulled:
         if not a.quiet:
             print("yanked %s %s: not reported (catalog/yanked.json)" % (r["id"], r["version"] or r["asset"]),
@@ -236,10 +253,11 @@ def main():
     for i, repo, why in failed:
         print("could not read %s (%s): %s" % (i, repo, why), file=sys.stderr)
     kinds = sorted({r["kind"] for r in report if not r["yanked"]})
-    print("%d packages checked%s, %d clean, %d with problems, %d yanked, %d unreadable, %d entries skipped"
+    print("%d packages checked%s, %d clean, %d with problems, %d with warnings, %d yanked, %d unreadable, "
+          "%d entries skipped"
           % (len(report) - len(pulled), (" (" + ", ".join(kinds) + ")") if kinds else "",
-             len(report) - len(pulled) - len(bad) - len(unreadable), len(bad), len(pulled), len(unreadable),
-             len(skipped)))
+             len(report) - len(pulled) - len(bad) - len(unreadable), len(bad), len(warned), len(pulled),
+             len(unreadable), len(skipped)))
     if a.json:
         with open(a.json, "w", newline="\n") as f:
             json.dump({"checked": report, "skipped": skipped, "failed": failed}, f, indent=1)
