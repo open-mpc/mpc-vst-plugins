@@ -1,0 +1,17 @@
+{
+  "id": "subsonic-soundscape-gen",
+  "name": "SubSonic Soundscape Gen",
+  "author": "uartpdx",
+  "repo": "uartpdx/subsonicsoundscape",
+  "kind": "instrument",
+  "license": "All rights reserved",
+  "source_available": true,
+  "summary": "Sub-bass generator: an excited bedrock oscillator with a pitch envelope, smelt drive and grid triggering. Built for huge low-end swells and slow, generative soundscapes.",
+  "style": "synth",
+  "tags": [
+    "sub-bass",
+    "generative",
+    "drone",
+    "soundscape"
+  ]
+}
