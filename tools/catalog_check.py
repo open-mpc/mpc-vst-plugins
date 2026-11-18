@@ -33,6 +33,9 @@ ADDIN_KEYS = ("ADDIN_ID", "ADDIN_NAME", "ADDIN_SO", "ADDIN_CONF", "ADDIN_FILES",
 # ADDIN_WEB_PATH: /seg/ or /seg/seg/ (letters, digits . _ ~ -), no empty, . or .. segments (docs/ADDINS.md, "Declaring a web page")
 ADDIN_WEB_PATH = re.compile(r"/(?:(?!\.\.?/)[A-Za-z0-9._~-]+/)+")
 ADDIN_SCRIPTS = ("install.sh", "uninstall.sh", "addin-lib.sh")
+# Files at the top of a package that the device's sh, awk or sha256sum reads: they must be LF and have no BOM
+# (device_text_problems below; also tools/catalog_text_scan.py, which checks the published packages).
+DEVICE_TEXT_FILES = ("install.sh", "uninstall.sh", "plugin_list.awk", "addin-lib.sh", "addin.manifest", "SHA256SUMS", "MODES")
 ADDIN_FILE = re.compile(r"[A-Za-z0-9_-][A-Za-z0-9._-]*")
 
 
@@ -257,7 +260,7 @@ def check(zpath, catalog=False, expect_id=None, expect_repo=None, require_portab
 
     # The device's sh, awk and sha256sum stop at a CR and read a BOM as part of the first line: a released
     # plugin_list.awk shipped with CRLF once and the device's awk stopped at its first line of code (docs/RELEASING.md).
-    for f in ("install.sh", "uninstall.sh", "plugin_list.awk", "SHA256SUMS", "MODES"):
+    for f in DEVICE_TEXT_FILES:
         if f in files:
             problem = device_text_problems(f, files[f])
             if problem:

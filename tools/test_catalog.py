@@ -669,6 +669,18 @@ class AddinTest(Base):
         self.assertEqual(v["hooks"], ["snd_pcm_writei"])
         self.assertFalse(v["chains"])   # the armv7 build passes calls on, the Gen2 one doesn't: both must
 
+    def test_crlf_in_an_addin_script_is_an_error(self):
+        z = self.build_addin()
+        bad = self.resum(z, "addin-lib.sh", lambda d: d.replace(b"\n", b"\r\n"))
+        e, _, _ = catalog_check.check(bad)
+        self.assertTrue(any("addin-lib.sh" in x and "CR (Windows)" in x for x in e), e)
+
+    def test_a_bom_in_the_addin_manifest_is_an_error(self):
+        z = self.build_addin()
+        bad = self.resum(z, "addin.manifest", lambda d: b"\xef\xbb\xbf" + d)
+        e, _, _ = catalog_check.check(bad)
+        self.assertTrue(any("addin.manifest" in x and "UTF-8 BOM" in x for x in e), e)
+
     def test_hooks_are_what_the_preloaded_library_defines(self):
         """An addin's version record lists the functions its ADDIN_SO defines (what it replaces in MPC); a helper program in the zip
         does not count (the remote addin's helper exports stderr, 2026-10-26), and a plugin has no hooks."""
