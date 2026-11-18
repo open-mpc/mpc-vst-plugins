@@ -15,7 +15,9 @@ checks install.sh, uninstall.sh, plugin_list.awk, addin-lib.sh, addin.manifest, 
 .sh/.awk in the package. Only the zip's central directory and those members are fetched, over HTTP range requests:
 nothing is downloaded whole, nothing is written to the catalog. Addins and plugins are both covered; entries that
 build for themselves (no published zip) are skipped. --all-versions scans every release that ships a zip, not just
-the newest (slower, and useful once, to find the packages that predate the check).
+the newest (slower, and useful once, to find the packages that predate the check). A package the catalog already
+yanks (catalog/yanked.json) is reported as yanked and never as a problem, so the scan asks for a re-release, not for a
+yank of something already pulled. --yanked "" checks those too.
 
 Exit status is 1 when a package has a problem, so a workflow can run it.
 """
@@ -88,25 +90,34 @@ def wanted(entry, name):
     return fnmatch.fnmatch(name, pat) or ("armv7" in pat and fnmatch.fnmatch(name, pat.replace("armv7", "aarch64")))
 
 
-def scan_asset(url):
-    """The device-side text problems of one package ([] when it is clean)."""
-    problems = []
+def scan_asset(url, entry_id="", yanked=()):
+    """(version, problems, is_yanked) for one package. The version is the one in its manifest, which is exactly what
+    catalog/yanked.json keys on, so the scan skips what the catalog has already pulled."""
     f = HttpFile(url)
     if f.size <= WHOLE_ZIP:   # most packages are small: one GET here beats a seek per member
         with urllib.request.urlopen(urllib.request.Request(f.url, headers=UA), timeout=300) as r:
             src = io.BytesIO(r.read())
     else:
         src = f
+    problems = []
     with zipfile.ZipFile(src) as z:
-        for n in z.namelist():
-            if n.endswith("/"):
-                continue
+        names = [n for n in z.namelist() if not n.endswith("/")]
+        manifest = next((n for n in names if n.count("/") == 1 and n.endswith("/mpc-plugin.json")), None)
+        version = ""
+        if manifest:
+            try:
+                version = str(json.loads(z.read(manifest)).get("version") or "")
+            except (ValueError, KeyError, TypeError):
+                version = ""
+        if version and entry_id and ("%s@%s" % (entry_id, version) in yanked or "%s@*" % entry_id in yanked):
+            return version, [], True
+        for n in names:
             base = n.rsplit("/", 1)[-1]
             if base in DEVICE_TEXT_FILES or base.lower().endswith((".sh", ".awk")):
                 problem = device_text_problems(n, z.read(n))
                 if problem:
                     problems.append(problem)
-    return problems
+    return version, problems, False
 
 
 def packages_of(src, entry, cache, all_versions=False):
@@ -138,7 +149,17 @@ def main():
     ap.add_argument("--json", metavar="FILE", help="write the report as JSON")
     ap.add_argument("--quiet", action="store_true", help="only the problem list and the summary")
     ap.add_argument("--all-versions", action="store_true", help="every release with a zip, not only the newest")
+    ap.add_argument("--yanked", default=os.path.join(os.path.dirname(HERE), "catalog", "yanked.json"),
+                    metavar="FILE", help="packages pulled from the catalog, reported separately ('' to check them too)")
     a = ap.parse_args()
+
+    yanked = set()
+    if a.yanked:
+        try:
+            with open(a.yanked) as f:
+                yanked = set(json.load(f))
+        except (OSError, ValueError) as ex:
+            sys.exit("cannot read --yanked %s: %s" % (a.yanked, ex))
 
     entries, problems = load_registry(a.registry)
     if problems:
@@ -173,30 +194,36 @@ def main():
     def one(job):
         e, tag, asset = job
         try:
-            found = scan_asset(asset["browser_download_url"])
+            version, found, pulled = scan_asset(asset["browser_download_url"], e["id"], yanked)
         except Exception as ex:
-            found = ["could not read the zip: %s" % ex]
+            version, found, pulled = "", ["could not read the zip: %s" % ex], False
         with lock:
             done[0] += 1
             if not a.quiet and done[0] % 25 == 0:
                 print("checked %d/%d" % (done[0], len(jobs)), file=sys.stderr, flush=True)
-        return {"id": e["id"], "kind": e.get("kind"), "repo": e["repo"], "tag": tag,
-                "asset": asset["name"], "url": asset["browser_download_url"], "problems": found}
+        return {"id": e["id"], "kind": e.get("kind"), "repo": e["repo"], "tag": tag, "version": version,
+                "asset": asset["name"], "url": asset["browser_download_url"], "problems": found, "yanked": pulled}
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, a.jobs)) as ex:
         report = list(ex.map(one, jobs))
 
-    bad = [r for r in report if r["problems"]]
+    pulled = [r for r in report if r["yanked"]]
+    bad = [r for r in report if r["problems"] and not r["yanked"]]
     for r in bad:
         print("PROBLEM %s (%s) %s %s" % (r["id"], r["kind"], r["repo"], r["asset"]))
         for p in r["problems"]:
             print("        " + p)
+    for r in pulled:
+        if not a.quiet:
+            print("yanked %s %s: not reported (catalog/yanked.json)" % (r["id"], r["version"] or r["asset"]),
+                  file=sys.stderr)
     for i, repo, why in skipped:
         if not a.quiet:
             print("skipped %s (%s): %s" % (i, repo, why), file=sys.stderr)
-    kinds = sorted({r["kind"] for r in report})
-    print("%d packages checked (%s), %d clean, %d with problems, %d entries skipped"
-          % (len(report), ", ".join(kinds), len(report) - len(bad), len(bad), len(skipped)))
+    kinds = sorted({r["kind"] for r in report if not r["yanked"]})
+    print("%d packages checked%s, %d clean, %d with problems, %d yanked, %d entries skipped"
+          % (len(report) - len(pulled), (" (" + ", ".join(kinds) + ")") if kinds else "",
+             len(report) - len(pulled) - len(bad), len(bad), len(pulled), len(skipped)))
     if a.json:
         with open(a.json, "w", newline="\n") as f:
             json.dump({"checked": report, "skipped": skipped}, f, indent=1)
