@@ -22,6 +22,7 @@ Exit status is 1 when a package has a problem, so a workflow can run it.
 import argparse
 import concurrent.futures
 import fnmatch
+import io
 import json
 import os
 import sys
@@ -35,6 +36,7 @@ from catalog_check import DEVICE_TEXT_FILES, device_text_problems  # noqa: E402
 from catalog_build import GitHub, load_registry  # noqa: E402
 
 UA = {"User-Agent": "mpc-vst-catalog-scan"}
+WHOLE_ZIP = 12 * 1024 * 1024   # a package this small is fetched in one request; a range read costs ~30 round trips
 
 
 class HttpFile:
@@ -89,7 +91,13 @@ def wanted(entry, name):
 def scan_asset(url):
     """The device-side text problems of one package ([] when it is clean)."""
     problems = []
-    with zipfile.ZipFile(HttpFile(url)) as z:
+    f = HttpFile(url)
+    if f.size <= WHOLE_ZIP:   # most packages are small: one GET here beats a seek per member
+        with urllib.request.urlopen(urllib.request.Request(f.url, headers=UA), timeout=300) as r:
+            src = io.BytesIO(r.read())
+    else:
+        src = f
+    with zipfile.ZipFile(src) as z:
         for n in z.namelist():
             if n.endswith("/"):
                 continue
