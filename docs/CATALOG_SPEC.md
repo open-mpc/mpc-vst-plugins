@@ -280,7 +280,7 @@ refuses an invalid file). `{"schema": 1, "apps": [...]}`, each app:
 
 ## MPC Sample OS (`catalog/sample_os.json`) (2026-11-22, offline: unit tests and a headless-browser check of the tab)
 Alternative operating systems for the MPC Sample: standalone apps that replace the stock MPC Sample app at boot (issue #958). Not plugins,
-not part of `catalog.json`, `catalog.tsv` or any installer: the site shows them on its **MPC Sample OS** tab and publishes `sample_os.json`
+not part of `catalog.json`, `catalog.tsv` or any installer: the site shows them on its **MPC Sample OS** tab (shown only under the MPC Sample device switch) and publishes `sample_os.json`
 next to `catalog.json`. Checked by `tools/sample_os_check.py` (CI, and the site build refuses an invalid file). Pinned by hand: there is no
 resolver, so a new release is a PR. `{"schema": 1, "systems": [...]}`, each system:
 
