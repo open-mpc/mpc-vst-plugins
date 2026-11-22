@@ -62,7 +62,7 @@
     <button type="button" role="tab" id="tab-addin" aria-controls="panel-plugins" aria-selected="false" data-tab="addin" tabindex="-1">Addins <span class="n" id="n-addin"></span></button>
     <button type="button" role="tab" id="tab-patches" aria-controls="panel-patches" aria-selected="false" data-tab="patches" tabindex="-1">Device patches <span class="n">/*N_PATCHES*/</span></button>
     <button type="button" role="tab" id="tab-apps" aria-controls="panel-apps" aria-selected="false" data-tab="apps" tabindex="-1">Companion apps <span class="n">/*N_APPS*/</span></button>
-    <button type="button" role="tab" id="tab-sampleos" aria-controls="panel-sampleos" aria-selected="false" data-tab="sampleos" tabindex="-1" hidden>MPC Sample OS <span class="n">/*N_SAMPLE_OS*/</span></button>
+    <button type="button" role="tab" id="tab-firmware" aria-controls="panel-firmware" aria-selected="false" data-tab="firmware" tabindex="-1"><span id="l-firmware">Alt firmware</span> <span class="n" id="n-firmware"></span></button>
   </div>
 
   <div role="tabpanel" id="panel-plugins" aria-labelledby="tab-all">
@@ -140,9 +140,10 @@
     <p class="empty" id="a-empty" hidden>No companion apps match.</p>
   </div>
 
-  <div role="tabpanel" id="panel-sampleos" aria-labelledby="tab-sampleos" hidden>
-    <p class="tabintro">Alternative operating systems for the MPC Sample: standalone apps that replace the stock MPC Sample app while they run. Not plugins, and the catalog installs none of them. Each one listed has a device report, starts only on the stock firmware it lists, writes nothing to the system, and gives a stock Sample back when you boot without its card. Read its flags before you install.</p>
-    <div class="grid">/*SAMPLE_OS_HTML*/</div>
+  <div role="tabpanel" id="panel-firmware" aria-labelledby="tab-firmware" hidden>
+    <p class="tabintro">Alternative firmware: standalone apps that replace the stock <span id="fw-dev">MPC</span> app while they run. Not plugins, and the catalog installs none of them. Each one listed has a device report, starts only on the stock firmware it lists, writes nothing to the system, and gives you the stock device back when you boot without its card or drive. Read its flags before you install.</p>
+    <div class="grid" id="firmware">/*FIRMWARE_HTML*/</div>
+    <p class="empty" id="fw-empty" hidden></p>
   </div>
 
   <footer>Community-provided software. Installing runs a script as root on your device: check the source and the checksum first. Not affiliated with or endorsed by Akai Professional. Use at your own risk, with no warranty: a plugin or patch can crash MPC, lose unsaved work or, at worst, leave the device needing a reinstall of its OS. Back up first.<br>
@@ -582,7 +583,14 @@ function render() {
   $("n-plat-sample").textContent = P.filter(function (p) { return platOk(p, "sample"); }).length;
   document.querySelectorAll("[data-plat]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-plat") === state.plat)); });
   $("l-gen").hidden = state.plat === "sample";
-  $("tab-sampleos").hidden = state.plat !== "sample";
+  /* the firmware tab follows the device switch: MPC Sample OS under MPC Sample, Alt firmware (standalone MPCs and Force) otherwise */
+  var fwDev = state.plat === "sample" ? "mpc-sample" : "mpc", fwN = 0;
+  document.querySelectorAll("#firmware [data-device]").forEach(function (c) { var on = c.getAttribute("data-device") === fwDev; c.hidden = !on; fwN += on ? 1 : 0; });
+  $("l-firmware").textContent = state.plat === "sample" ? "MPC Sample OS" : "Alt firmware";
+  $("fw-dev").textContent = state.plat === "sample" ? "MPC Sample" : "MPC";
+  $("n-firmware").textContent = fwN;
+  $("fw-empty").hidden = fwN > 0;
+  $("fw-empty").textContent = state.plat === "sample" ? "No MPC Sample operating systems are listed yet." : "No alternative firmware for the standalone MPCs is listed yet.";
   PLUGIN_TABS.forEach(function (k) { $("n-" + k).textContent = P.filter(function (p) { return inTabKind(p, k) && platOk(p); }).length; });   /* tab counts follow the device switch */
   var inTab = P.filter(function (p) { return (PLUGIN_TABS.indexOf(state.tab) < 0 || inTabKind(p, state.tab)) && platOk(p); }).length;
   $("count").textContent = nOut + " of " + inTab + " " + (state.tab === "midi" ? "MIDI plugins" : state.tab === "all" ? "plugins" : (KINDS[state.tab] || "plugins").toLowerCase());
@@ -615,21 +623,20 @@ function load() {
   if (!SORTS[state.sort]) state.sort = "recommended";
   if (state.tier && TIER_FILTERS.indexOf(state.tier) < 0) state.tier = "";
   if (state.tab === "plugins") state.tab = "instrument";   // links from before the split
-  if (TABS.indexOf(state.tab) < 0 || (state.tab === "sampleos" && state.plat !== "sample")) state.tab = "all";   /* MPC Sample OS lives under the MPC Sample switch */
+  if (TABS.indexOf(state.tab) < 0) state.tab = "all";
   if (state.open && !/(^#|&)tab=/.test(location.hash)) {   /* a shared #p= link shows its plugin's own tab behind the popup */
     var o = P.filter(function (p) { return p.id === state.open; })[0];
     state.tab = PLUGIN_TABS.filter(function (k) { return inTabKind(o, k); })[0] || state.tab;
   }
 }
 /* Tabs: Instruments, Effects and Addins share the filter bar and grid (the tab is the kind); Device patches and Companion apps are their own panels. The tab is part of the URL hash. */
-var TABS = ["all", "instrument", "midi", "effect", "addin", "patches", "apps", "sampleos"];
-function shownTabs() { return TABS.filter(function (n) { return n !== "sampleos" || state.plat === "sample"; }); }   /* the MPC Sample OS tab shows only under the MPC Sample switch */
+var TABS = ["all", "instrument", "midi", "effect", "addin", "patches", "apps", "firmware"];
 function showTab(t, focus) {
   state.tab = t;
   TABS.forEach(function (n) {
     var on = n === t;
     $("tab-" + n).setAttribute("aria-selected", on ? "true" : "false"); $("tab-" + n).tabIndex = on ? 0 : -1;
-    if (n === "patches" || n === "apps" || n === "sampleos") $("panel-" + n).hidden = !on;
+    if (n === "patches" || n === "apps" || n === "firmware") $("panel-" + n).hidden = !on;
     if (on && focus) $("tab-" + n).focus();
   });
   $("panel-plugins").hidden = PLUGIN_TABS.indexOf(t) < 0;
@@ -638,7 +645,7 @@ function showTab(t, focus) {
 }
 document.querySelector(".tabs").addEventListener("click", function (e) { var b = e.target.closest("[data-tab]"); if (b) showTab(b.getAttribute("data-tab")); });
 document.querySelector(".tabs").addEventListener("keydown", function (e) {
-  var T = shownTabs(), i = T.indexOf(state.tab), d = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+  var T = TABS, i = T.indexOf(state.tab), d = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
   if (e.key === "Home") d = -i; else if (e.key === "End") d = T.length - 1 - i;
   if (d === undefined) return;
   e.preventDefault(); showTab(T[(i + d + T.length) % T.length], true);
@@ -734,7 +741,7 @@ $("f-tag").addEventListener("change", function () { var t = $("f-tag").value; if
 $("tagbar").addEventListener("click", function (e) { var b = e.target.closest("[data-untag]"); if (!b) return; var t = b.getAttribute("data-untag"); state.tags = t === "*" ? [] : state.tags.filter(function (x) { return x !== t; }); fillTags(); render(); });
 $("grid").addEventListener("click", function (e) { var b = e.target.closest("[data-tag]"); if (!b) return; var t = b.getAttribute("data-tag"); if (TAGN[t] && state.tags.indexOf(t) < 0) state.tags.push(t); fillTags(); render(); });
 $("show-exp").addEventListener("click", function () { state.tier = "all"; sync(); render(); });
-document.querySelectorAll("[data-plat]").forEach(function (b) { b.addEventListener("click", function () { state.plat = b.getAttribute("data-plat"); if (state.plat) state.gen = ""; if (state.tab === "sampleos" && state.plat !== "sample") state.tab = "all"; sync(); showTab(state.tab); }); });
+document.querySelectorAll("[data-plat]").forEach(function (b) { b.addEventListener("click", function () { state.plat = b.getAttribute("data-plat"); if (state.plat) state.gen = ""; sync(); render(); }); });
 $("beta").addEventListener("change", function () { state.beta = $("beta").checked; render(); });
 $("dir").addEventListener("click", function () { state.rev = !state.rev; render(); });
 $("clear").addEventListener("click", function () { state = { tab: state.tab, plat: state.plat, q: "", style: "", dev: "", tags: [], os: "", gen: "", tier: "", sort: "recommended", rev: false, beta: false, sel: state.sel, open: "", coll: "" }; sync(); render(); });

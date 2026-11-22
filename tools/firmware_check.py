@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Validate catalog/sample_os.json: alternative operating systems for the MPC Sample (standalone apps that replace the stock MPC
-Sample app at boot), shown on the catalog page's MPC Sample OS tab. Not plugins and never installed by the catalog: each card links
-to a pinned release zip. The rules are the entry requirements agreed in issue #958 (docs/CATALOG.md, "MPC Sample OS entries"):
+"""Validate catalog/firmware.json: alternative firmware (standalone apps that replace the stock MPC app at boot) for the MPC Sample
+(`device` "mpc-sample") or the standalone MPCs and Force (`device` "mpc", with the `models` it runs on), shown on the catalog page's
+firmware tab, which follows the device switch (MPC Sample OS / Alt firmware). Not plugins and never installed by the catalog: each card
+links to a pinned release zip. The rules are the entry requirements agreed in issue #958 (docs/CATALOG.md, "Alternative firmware entries"):
 a device report covering first boot, normal use, returning to stock and uninstall; pinned stock firmware; no root filesystem
 writes; a documented way to skip it at boot; stock user data left alone; a pinned release; cleared content and full source;
 bundled catalog plugins pinned; and risky behaviour (root, kernel modules, USB gadget changes, network services) declared and
-reviewed by a maintainer. Usage: sample_os_check.py [sample_os.json] [--plugins catalog/plugins]. Returns (errors, systems) from check()."""
+reviewed by a maintainer. Usage: firmware_check.py [firmware.json] [--plugins catalog/plugins]. Returns (errors, systems) from check()."""
 import argparse
 import os
 import re
@@ -20,6 +21,9 @@ LOGIN = re.compile(r"^[A-Za-z0-9](-?[A-Za-z0-9])*$")
 REQUIRED = ("id", "title", "summary", "author", "license", "repo", "release", "version", "boot_skip")
 COVERED = ("first-boot", "normal-use", "return-to-stock", "uninstall")   # what a device report must have covered
 FLAGS = ("root", "kernel_modules", "usb_gadget")
+DEVICES = ("mpc-sample", "mpc")
+MODELS = ("MPC Live", "MPC Live II", "MPC Live III", "MPC One", "MPC One+", "MPC One G2", "MPC X", "MPC X SE", "MPC Key 37", "MPC Key 61",
+          "MPC Key G2", "MPC XL", "Force")   # "mpc" entries: the standalone models (as the site's report form names them)
 
 
 def flagged(s):
@@ -31,7 +35,7 @@ def flagged(s):
 def check(doc, plugins_dir=None):
     errors, systems = [], doc.get("systems") if isinstance(doc, dict) else None
     if not isinstance(doc, dict) or doc.get("schema") != 1 or not isinstance(systems, list):
-        return ["sample_os.json must be an object with schema 1 and a 'systems' list"], []
+        return ["firmware.json must be an object with schema 1 and a 'systems' list"], []
     seen = set()
     for i, s in enumerate(systems):
         w = "systems[%d]" % i
@@ -46,6 +50,13 @@ def check(doc, plugins_dir=None):
         if s.get("id") in seen:
             err("duplicate id %r" % s["id"])
         seen.add(s.get("id"))
+        if s.get("device") not in DEVICES:
+            err("device must be one of %s" % ", ".join(DEVICES))
+        models = s.get("models") or []
+        if s.get("device") == "mpc" and (not models or not set(models) <= set(MODELS)):
+            err("models must list the standalone models it runs on, from: %s" % ", ".join(MODELS))
+        if s.get("device") == "mpc-sample" and models:
+            err("models is only for device \"mpc\"")
         if s.get("repo") and not REPO.match(s["repo"]):
             err("repo must be owner/name")
         for k in ("release", "screenshot", "docs"):
@@ -66,7 +77,7 @@ def check(doc, plugins_dir=None):
         # device report
         reports = s.get("tested") or []
         if not reports:
-            err("tested needs at least one device report from a real MPC Sample")
+            err("tested needs at least one device report from a real device")
         current = False
         for j, t in enumerate(reports):
             tw = "tested[%d]" % j
@@ -74,6 +85,8 @@ def check(doc, plugins_dir=None):
                 err("%s: needs by, date (YYYY-MM-DD) and the version tested" % tw)
             if t.get("firmware") not in versions:
                 err("%s: firmware must be one of stock_firmware's versions" % tw)
+            if s.get("device") == "mpc" and t.get("device") not in models:
+                err("%s: device must be one of the entry's models" % tw)
             missing = [c for c in COVERED if c not in (t.get("covered") or [])]
             if missing:
                 err("%s: covered is missing %s" % (tw, ", ".join(missing)))
@@ -84,8 +97,8 @@ def check(doc, plugins_dir=None):
         fp = s.get("footprint") or {}
         if fp.get("rootfs_writes") is not False:
             err("footprint.rootfs_writes must be false: it runs from the card and RAM and writes nothing to the root filesystem")
-        if fp.get("without_card") != "stock":
-            err("footprint.without_card must be \"stock\": booting without the card gives a stock Sample")
+        if fp.get("without_media") != "stock":
+            err("footprint.without_media must be \"stock\": booting without its card or drive gives the stock device")
         if not fp.get("uninstall"):
             err("footprint.uninstall must say how to remove it (deleting one folder)")
         # user data
@@ -125,7 +138,7 @@ def check(doc, plugins_dir=None):
 if __name__ == "__main__":
     import json
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("path", nargs="?", default="catalog/sample_os.json")
+    ap.add_argument("path", nargs="?", default="catalog/firmware.json")
     ap.add_argument("--plugins", default="catalog/plugins", help="registry folder, to check bundled_plugins ids")
     a = ap.parse_args()
     errs, systems = check(json.load(open(a.path, encoding="utf-8")), a.plugins if os.path.isdir(a.plugins) else None)

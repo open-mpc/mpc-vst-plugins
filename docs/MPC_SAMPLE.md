@@ -79,7 +79,7 @@ the screen notes 12/13/14, dial CC 100 (relative, 1 = +1, 127 = -1) and press no
 
 A standalone app that takes over from the stock MPC Sample app (an alternative OS) is not a plugin. The catalog lists those on the
 MPC Sample OS tab with stricter rules (device report, stock firmware hash check, nothing written to the system, declared flags):
-`docs/CATALOG_SPEC.md`, "MPC Sample OS" (2026-11-22).
+`docs/CATALOG_SPEC.md`, "Alternative firmware" (2026-11-22).
 
 ## What the source adds beyond our device notes
 
