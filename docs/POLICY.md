@@ -29,8 +29,7 @@ suggestion; nothing here is in force until the owners adopt it (a PR that remove
   `VST2 Plugins/<Manufacturer> - VST - <Name>/` folder with no `install.sh` and no `MPC.settings` edit (NOTES.md, 2026-10-31,
   device). For entries installed only that way the root-installer checks (canonical `install.sh`) need not apply. Public source,
   licence, branding, a shown checksum and yanking apply to every entry; the Force, MPC OS 2.x and MockbaMod still use the
-  installer. **DECIDE:** whether to relax those checks, and whether closed binaries are ever listed (suggested: relax the
-  installer checks, never list closed binaries; both need a PR to `CATALOG.md` and the checks first).
+  installer. **DECIDE:** whether to relax those checks (suggested: yes, for open-source entries).
 - **A release must be catalog-conformant** (`mpc-plugin.json` from `tools/release.py`, `catalog_check.py` OK). Releases made with
   the shared release workflow are; a plugin made with Akai's SDK is listed through the same checks.
 - Authors keep their own repos. Listing does not require moving a repo into the organization.
