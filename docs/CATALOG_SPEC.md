@@ -278,6 +278,27 @@ refuses an invalid file). `{"schema": 1, "apps": [...]}`, each app:
 
 `tools/app_resolve.py` runs in the Catalog build workflow (nightly, on pushes to `main` touching the catalog, and by hand) and writes `catalog/dist/apps.json`, which `catalog_site.py` prefers over `catalog/apps.json`. The sha256 is the asset's GitHub `digest`, else its line in a `SHA256SUMS` asset of the same release; an asset with neither is left out and reported. A failed read keeps the pinned `downloads`, so a bad night does not blank a card. A new release therefore appears on the next build, with no PR to this repo.
 
+## MPC Sample OS (`catalog/sample_os.json`) (2026-11-22, offline: unit tests and a headless-browser check of the tab)
+Alternative operating systems for the MPC Sample: standalone apps that replace the stock MPC Sample app at boot (issue #958). Not plugins,
+not part of `catalog.json`, `catalog.tsv` or any installer: the site shows them on its **MPC Sample OS** tab and publishes `sample_os.json`
+next to `catalog.json`. Checked by `tools/sample_os_check.py` (CI, and the site build refuses an invalid file). Pinned by hand: there is no
+resolver, so a new release is a PR. `{"schema": 1, "systems": [...]}`, each system:
+
+| field | |
+|---|---|
+| `id`, `title`, `summary`, `author`, `license`, `repo`, `version` | required, as for companion apps |
+| `release` | required https URL of the release page; `docs` (install/recovery guide) and `screenshot` optional https URLs |
+| `download` | required `{url, sha256}`: the exact release zip |
+| `stock_firmware` | required, non-empty `[{version, binary_hash}]`: the stock versions it starts on and the md5 or sha256 of the stock binary it checks before starting (like `mpc_md5` in `patches.json`) |
+| `tested` | required device reports `[{by, date, version, firmware, covered}]`; `firmware` is one of `stock_firmware`, and at least one report for the listed `version` must cover all of `first-boot`, `normal-use`, `return-to-stock`, `uninstall` |
+| `footprint` | required `{rootfs_writes: false, without_card: "stock", uninstall}`: runs from the card and RAM, booting without the card gives a stock Sample, `uninstall` says how (deleting one folder) |
+| `boot_skip` | required: how to skip it at boot without pulling the card (the stock autorun prompt, or a documented button hold) |
+| `user_data` | required `{changes_stock_data: false, writes_outside: [paths]}`: the stock app's projects, samples and settings are untouched; anything written outside its own folder is listed |
+| `content` | required `{source_complete, third_party_cleared, no_manufacturer_branding}`, all `true`: source for everything it runs (kernel modules included), no third-party banks, samples, ROMs or firmware without permission, no manufacturer branding (principle 6). The reviewer checks these against the zip |
+| `bundled_plugins` | optional `[{id, version, sha256}]`: catalog plugins it ships, unchanged upstream release zips pinned by hash; `id` must exist in `catalog/plugins/` |
+| `flags` | required `{root, kernel_modules, usb_gadget}` (booleans) and `network` (`[{port, auth, purpose}]`, `[]` for none) |
+| `flags_reviewed` | required when any flag is set: `{by, date, flags}`, a maintainer's login and exactly the flags set. Shown on the card with the flags |
+
 ## Portable paths (for engines)
 Engines locate their data next to the `.so` (`wrapper/plugin_dir.h`, `MODULE_SUBDIR`), never at a fixed `/sdcard`.
 The installers currently still install to the directory in the entry's `file=` and skins to `/sdcard/Synths`.

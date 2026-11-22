@@ -249,6 +249,16 @@ screen (the draw handler, the rack) loads and does nothing on a Live III. A regi
   Not caught: a conflict with something outside the catalog (a firmware or launcher addon), and an addin that replaces `dlsym` itself, which changes
   how every other addin finds the next function (commander, fixed 2026-10-13).
 
+### MPC Sample OS entries (2026-11-22, offline: unit tests and a headless-browser check; no entries yet)
+Issue #958 (RHYTHMER OS) asked to list a replacement OS for the MPC Sample, which fits none of plugins, device patches or companion apps.
+The maintainers agreed to a separate tab with its own manifest, `catalog/sample_os.json` (fields: CATALOG_SPEC.md "MPC Sample OS"),
+checked by `tools/sample_os_check.py`. The rules follow the requirements proposed in that issue, mapped onto what the catalog already checks:
+a device report (as `tested.json`), pinned stock firmware (as `mpc_md5` in `patches.json`), a pinned zip and sha256, no root filesystem
+writes and a stock Sample without the card, a way to skip it at boot, stock user data left alone, full source and cleared content
+(principle 6), bundled catalog plugins pinned by hash, and root / kernel modules / USB gadget / network services declared and reviewed by a
+maintainer (`flags_reviewed`, as for plugins), all shown on the card. The catalog installs nothing from this tab. Open: whether entries need
+an Experimental tier, and whether bundled plugin hashes should be checked against the plugins' releases at build time (today only the id is).
+
 ### Site
 Generated static HTML (`tools/catalog_site.py`, no JS framework): searchable/filterable grid, a page per plugin
 (screenshot, description, version history, install steps, source link, checksum, tested-on), a "recently updated"

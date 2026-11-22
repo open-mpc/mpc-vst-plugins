@@ -117,6 +117,42 @@ def app_cards(doc):
     return "".join(cards)
 
 
+FLAG_NAMES = {"root": "Runs as root", "kernel_modules": "Loads kernel modules", "usb_gadget": "Changes the USB gadget"}
+
+
+def sample_os_cards(doc):
+    """Cards for catalog/sample_os.json (alternative operating systems for the MPC Sample). The catalog installs none of them; each card
+    shows the device report, the stock firmware it starts on and every maintainer-reviewed flag before the download."""
+    e = lambda x: html_escape(str(x), quote=True)
+    cards = []
+    for s in doc["systems"]:
+        f = s["flags"]
+        warn = [FLAG_NAMES[k] for k in ("root", "kernel_modules", "usb_gadget") if f.get(k)] + \
+               ["Network service on port %d (%s): %s" % (n["port"], "with auth" if n["auth"] else "no auth", n["purpose"]) for n in f.get("network", [])]
+        tags = ['<span class="tag">MPC Sample OS</span>', '<span class="tag">%s</span>' % e(s["license"])] + \
+               ['<span class="tag warn">%s</span>' % e(w) for w in warn]
+        t = sorted(s["tested"], key=lambda r: r["date"])[-1]
+        rows = [("Version", e(s["version"])),
+                ("Stock firmware", e(", ".join(x["version"] for x in s["stock_firmware"]))),
+                ("Tested", e("%s by %s on stock %s, %s" % (t["version"], t["by"], t["firmware"], t["date"]))),
+                ("Skip at boot", e(s["boot_skip"])),
+                ("Uninstall", e(s["footprint"]["uninstall"])),
+                ("Writes outside its folder", e(", ".join(s["user_data"].get("writes_outside") or []) or "nothing")),
+                ("Bundled plugins", e(", ".join("%s %s" % (b["id"], b["version"]) for b in s.get("bundled_plugins") or []))) if s.get("bundled_plugins") else None,
+                ("Flags reviewed", e("%s, %s" % (s["flags_reviewed"]["by"], s["flags_reviewed"]["date"]))) if warn else None,
+                ("Source", '<a href="https://github.com/%s">%s</a>' % (e(s["repo"]), e(s["repo"])))]
+        dl = "".join("<dt>%s</dt><dd>%s</dd>" % r for r in rows if r)
+        shot = ('<a class="shot" href="%s"><img src="%s" alt="%s screenshot" loading="lazy"></a>' % (e(s["screenshot"]), e(s["screenshot"]), e(s["title"]))
+                if str(s.get("screenshot", "")).startswith("https://") else "")
+        docs = '<a class="btn-l" href="%s">Install guide</a>' % e(s["docs"]) if str(s.get("docs", "")).startswith("https://") else ""
+        cards.append('<article class="card" data-text="%s">%s<header><div><h2>%s</h2><div class="by">by %s</div></div></header>'
+                     '<div class="tags">%s</div><p>%s</p><dl class="meta">%s</dl><div class="actions"><a class="btn-l primary" href="%s">Download</a>'
+                     '%s<a class="btn-l" href="%s">Release page</a></div><details class="vers"><summary>Checksum (sha256)</summary><code>%s</code></details></article>'
+                     % (e(" ".join([s["title"], s["author"], s["summary"]]).lower()), shot, e(s["title"]), e(s["author"]), "".join(tags), e(s["summary"]),
+                        dl, e(s["download"]["url"]), docs, e(s["release"]), e(s["download"]["sha256"])))
+    return "".join(cards)
+
+
 def nav_html(pages, current):
     items = [("index.html", "Catalog", "index")] + [(p["slug"] + ".html", p["nav"], p["slug"]) for p in pages if not p.get("hidden")]
     return "".join('<li><a href="%s"%s>%s</a></li>' % (h, ' aria-current="page"' if k == current else "", html_escape(t)) for h, t, k in items)
@@ -140,7 +176,7 @@ def render_page(page, pages):
     return tpl
 
 
-def render(catalog, pages=(), helper_hashes=None, patches_html="", apps_html="", n_patches=0, n_apps=0):
+def render(catalog, pages=(), helper_hashes=None, patches_html="", apps_html="", n_patches=0, n_apps=0, os_html="", n_os=0):
     """The catalog page HTML for a catalog dict. The JSON is embedded in a <script type=application/json>, so '<' is escaped."""
     data = json.dumps(catalog, separators=(",", ":"), ensure_ascii=False).replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
     store = json.dumps({k: v for k, v in (helper_hashes or {}).items() if isinstance(v, str) and len(v) == 64 and all(c in "0123456789abcdef" for c in v)})
@@ -151,7 +187,8 @@ def render(catalog, pages=(), helper_hashes=None, patches_html="", apps_html="",
     guides = "".join('<a href="%s.html"><b>%s</b><span>%s</span></a>' % (p["slug"], html_escape(p["nav"]), html_escape(p["summary"])) for p in pages if not p.get("hidden"))
     return tpl.replace("/*GUIDES*/", guides).replace("/*NAV*/", nav_html(list(pages), "index")).replace("/*SITE_CSS*/", read("site.css")) \
         .replace("/*PATCHES_HTML*/", patches_html).replace("/*APPS_HTML*/", apps_html) \
-        .replace("/*N_PATCHES*/", str(n_patches)).replace("/*N_APPS*/", str(n_apps)).replace(marker, data)
+        .replace("/*N_PATCHES*/", str(n_patches)).replace("/*N_APPS*/", str(n_apps)) \
+        .replace("/*SAMPLE_OS_HTML*/", os_html or '<p class="empty">No MPC Sample operating systems are listed yet.</p>').replace("/*N_SAMPLE_OS*/", str(n_os)).replace(marker, data)
 
 
 def atom(catalog, base="", title="Open MPC - Plugin Catalog: new releases", ident="releases", path="feed.xml"):
@@ -352,6 +389,7 @@ def main():
     ap.add_argument("--out", default="catalog/dist/site")
     ap.add_argument("--pages", default="catalog/pages", help="folder of guide pages (Markdown)")
     ap.add_argument("--apps", default="catalog/apps.json", help="companion apps (desktop tools) for the catalog page's Companion apps tab; <out>/../apps.json (app_resolve.py output) is used instead when it exists")
+    ap.add_argument("--sample-os", default="catalog/sample_os.json", help="alternative operating systems for the MPC Sample, for the MPC Sample OS tab; published as sample_os.json if it exists")
     ap.add_argument("--patches", default="catalog/patches.json", help="device patches the installer app may offer (docs/PATCHES.md); published as patches.json if it exists")
     ap.add_argument("--base-url", default="", help="public site URL, for the feed's self link")
     a = ap.parse_args()
@@ -381,18 +419,28 @@ def main():
         errors, _ = app_check.check(apps_doc)
         if errors:
             raise SystemExit("catalog/apps.json is not valid:\n  " + "\n  ".join(errors))
+    os_doc = None
+    if os.path.isfile(a.sample_os):
+        import sample_os_check
+        os_doc = json.load(open(a.sample_os, encoding="utf-8"))
+        errors, _ = sample_os_check.check(os_doc)
+        if errors:
+            raise SystemExit("catalog/sample_os.json is not valid:\n  " + "\n  ".join(errors))
     patches_html = next((p["html"] for p in pages if p["slug"] == "patches"), "")
     helpers = [("mpc-store.sh", os.path.join(HERE, "mpc-store.sh")), ("sync.sh", os.path.join(HERE, "release", "sync.sh")),
                ("plugin_list.awk", os.path.join(HERE, "release", "plugin_list.awk"))]
     hashes = {name: hashlib.sha256(open(path, "rb").read()).hexdigest() for name, path in helpers}
     open(os.path.join(a.out, "index.html"), "w", encoding="utf-8").write(render(catalog, pages, hashes, patches_html, app_cards(apps_doc) if apps_doc else "",
-                                                                                    len(patches_doc["patches"]) if patches_doc else 0, len(apps_doc["apps"]) if apps_doc else 0))
+                                                                                    len(patches_doc["patches"]) if patches_doc else 0, len(apps_doc["apps"]) if apps_doc else 0,
+                                                                                    sample_os_cards(os_doc) if os_doc else "", len(os_doc["systems"]) if os_doc else 0))
     for pg in pages:
         open(os.path.join(a.out, pg["slug"] + ".html"), "w", encoding="utf-8").write(render_page(pg, pages))
     open(os.path.join(a.out, "feed.xml"), "w", encoding="utf-8").write(atom(catalog, a.base_url))
     shutil.copy(a.catalog, os.path.join(a.out, "catalog.json"))
     if apps_doc is not None:
         shutil.copy(a.apps, os.path.join(a.out, "apps.json"))
+    if os_doc is not None:
+        shutil.copy(a.sample_os, os.path.join(a.out, "sample_os.json"))
     if patches_doc is not None:
         shutil.copy(a.patches, os.path.join(a.out, "patches.json"))
     for name, path in helpers:   # the files a device downloads next to catalog.tsv, checked against the hashes listed in it

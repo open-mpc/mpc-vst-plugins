@@ -62,6 +62,7 @@
     <button type="button" role="tab" id="tab-addin" aria-controls="panel-plugins" aria-selected="false" data-tab="addin" tabindex="-1">Addins <span class="n" id="n-addin"></span></button>
     <button type="button" role="tab" id="tab-patches" aria-controls="panel-patches" aria-selected="false" data-tab="patches" tabindex="-1">Device patches <span class="n">/*N_PATCHES*/</span></button>
     <button type="button" role="tab" id="tab-apps" aria-controls="panel-apps" aria-selected="false" data-tab="apps" tabindex="-1">Companion apps <span class="n">/*N_APPS*/</span></button>
+    <button type="button" role="tab" id="tab-sampleos" aria-controls="panel-sampleos" aria-selected="false" data-tab="sampleos" tabindex="-1">MPC Sample OS <span class="n">/*N_SAMPLE_OS*/</span></button>
   </div>
 
   <div role="tabpanel" id="panel-plugins" aria-labelledby="tab-all">
@@ -137,6 +138,11 @@
     </div>
     <div class="grid" id="apps">/*APPS_HTML*/</div>
     <p class="empty" id="a-empty" hidden>No companion apps match.</p>
+  </div>
+
+  <div role="tabpanel" id="panel-sampleos" aria-labelledby="tab-sampleos" hidden>
+    <p class="tabintro">Alternative operating systems for the MPC Sample: standalone apps that replace the stock MPC Sample app while they run. Not plugins, and the catalog installs none of them. Each one listed has a device report, starts only on the stock firmware it lists, writes nothing to the system, and gives a stock Sample back when you boot without its card. Read its flags before you install.</p>
+    <div class="grid">/*SAMPLE_OS_HTML*/</div>
   </div>
 
   <footer>Community-provided software. Installing runs a script as root on your device: check the source and the checksum first. Not affiliated with or endorsed by Akai Professional. Use at your own risk, with no warranty: a plugin or patch can crash MPC, lose unsaved work or, at worst, leave the device needing a reinstall of its OS. Back up first.<br>
@@ -615,13 +621,13 @@ function load() {
   }
 }
 /* Tabs: Instruments, Effects and Addins share the filter bar and grid (the tab is the kind); Device patches and Companion apps are their own panels. The tab is part of the URL hash. */
-var TABS = ["all", "instrument", "midi", "effect", "addin", "patches", "apps"];
+var TABS = ["all", "instrument", "midi", "effect", "addin", "patches", "apps", "sampleos"];
 function showTab(t, focus) {
   state.tab = t;
   TABS.forEach(function (n) {
     var on = n === t;
     $("tab-" + n).setAttribute("aria-selected", on ? "true" : "false"); $("tab-" + n).tabIndex = on ? 0 : -1;
-    if (n === "patches" || n === "apps") $("panel-" + n).hidden = !on;
+    if (n === "patches" || n === "apps" || n === "sampleos") $("panel-" + n).hidden = !on;
     if (on && focus) $("tab-" + n).focus();
   });
   $("panel-plugins").hidden = PLUGIN_TABS.indexOf(t) < 0;
