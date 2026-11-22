@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Validate catalog/firmware.json: alternative firmware (standalone apps that replace the stock MPC app at boot) for the MPC Sample
+"""Validate catalog/alt_os.json: alternative OSes (standalone apps that run on the stock system and take the stock MPC app's place at boot;
+they do not replace the firmware) for the MPC Sample
 (`device` "mpc-sample") or the standalone MPCs and Force (`device` "mpc", with the `models` it runs on), shown on the catalog page's
-firmware tab, which follows the device switch (MPC Sample OS / Alt firmware). Not plugins and never installed by the catalog: each card
-links to a pinned release zip. The rules are the entry requirements agreed in issue #958 (docs/CATALOG.md, "Alternative firmware entries"):
+Alt OS tab, which follows the device switch (MPC Sample OS / Alt OS). Not plugins and never installed by the catalog: each card
+links to a pinned release zip. The rules are the entry requirements agreed in issue #958 (docs/CATALOG.md, "Alternative OS entries"):
 a device report covering first boot, normal use, returning to stock and uninstall; pinned stock firmware; no root filesystem
 writes; a documented way to skip it at boot; stock user data left alone; a pinned release; cleared content and full source;
 bundled catalog plugins pinned; and risky behaviour (root, kernel modules, USB gadget changes, network services) declared and
-reviewed by a maintainer. Usage: firmware_check.py [firmware.json] [--plugins catalog/plugins]. Returns (errors, systems) from check()."""
+reviewed by a maintainer. Usage: alt_os_check.py [alt_os.json] [--plugins catalog/plugins]. Returns (errors, systems) from check()."""
 import argparse
 import os
 import re
@@ -35,7 +36,7 @@ def flagged(s):
 def check(doc, plugins_dir=None):
     errors, systems = [], doc.get("systems") if isinstance(doc, dict) else None
     if not isinstance(doc, dict) or doc.get("schema") != 1 or not isinstance(systems, list):
-        return ["firmware.json must be an object with schema 1 and a 'systems' list"], []
+        return ["alt_os.json must be an object with schema 1 and a 'systems' list"], []
     seen = set()
     for i, s in enumerate(systems):
         w = "systems[%d]" % i
@@ -138,7 +139,7 @@ def check(doc, plugins_dir=None):
 if __name__ == "__main__":
     import json
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("path", nargs="?", default="catalog/firmware.json")
+    ap.add_argument("path", nargs="?", default="catalog/alt_os.json")
     ap.add_argument("--plugins", default="catalog/plugins", help="registry folder, to check bundled_plugins ids")
     a = ap.parse_args()
     errs, systems = check(json.load(open(a.path, encoding="utf-8")), a.plugins if os.path.isdir(a.plugins) else None)

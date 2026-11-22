@@ -278,11 +278,11 @@ refuses an invalid file). `{"schema": 1, "apps": [...]}`, each app:
 
 `tools/app_resolve.py` runs in the Catalog build workflow (nightly, on pushes to `main` touching the catalog, and by hand) and writes `catalog/dist/apps.json`, which `catalog_site.py` prefers over `catalog/apps.json`. The sha256 is the asset's GitHub `digest`, else its line in a `SHA256SUMS` asset of the same release; an asset with neither is left out and reported. A failed read keeps the pinned `downloads`, so a bad night does not blank a card. A new release therefore appears on the next build, with no PR to this repo.
 
-## Alternative firmware (`catalog/firmware.json`) (2026-11-22, offline: unit tests and a headless-browser check of the tab)
+## Alternative OS (`catalog/alt_os.json`) (2026-11-22, offline: unit tests and a headless-browser check of the tab)
 Standalone apps that replace the stock MPC app at boot, for the MPC Sample (issue #958) or for the standalone MPCs and Force. Not plugins,
-not part of `catalog.json`, `catalog.tsv` or any installer. The site shows them on one tab that follows the device switch: **Alt firmware**
-(entries with `device` `mpc`) under MPC / Force, **MPC Sample OS** (`device` `mpc-sample`) under MPC Sample. `firmware.json` is published
-next to `catalog.json`. Checked by `tools/firmware_check.py` (CI, and the site build refuses an invalid file). Pinned by hand: there is no
+not part of `catalog.json`, `catalog.tsv` or any installer. The site shows them on one tab that follows the device switch: **Alt OS**
+(entries with `device` `mpc`) under MPC / Force, **MPC Sample OS** (`device` `mpc-sample`) under MPC Sample. `alt_os.json` is published
+next to `catalog.json`. Checked by `tools/alt_os_check.py` (CI, and the site build refuses an invalid file). Pinned by hand: there is no
 resolver, so a new release is a PR. `{"schema": 1, "systems": [...]}`, each system:
 
 | field | |

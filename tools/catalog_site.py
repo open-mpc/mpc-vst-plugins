@@ -120,8 +120,8 @@ def app_cards(doc):
 FLAG_NAMES = {"root": "Runs as root", "kernel_modules": "Loads kernel modules", "usb_gadget": "Changes the USB gadget"}
 
 
-def firmware_cards(doc):
-    """Cards for catalog/firmware.json (alternative firmware for the MPC Sample or the standalone MPCs; data-device lets the page show the ones
+def alt_os_cards(doc):
+    """Cards for catalog/alt_os.json (alternative OS for the MPC Sample or the standalone MPCs; data-device lets the page show the ones
     for the device switch). The catalog installs none of them; each card
     shows the device report, the stock firmware it starts on and every maintainer-reviewed flag before the download."""
     e = lambda x: html_escape(str(x), quote=True)
@@ -130,7 +130,7 @@ def firmware_cards(doc):
         f = s["flags"]
         warn = [FLAG_NAMES[k] for k in ("root", "kernel_modules", "usb_gadget") if f.get(k)] + \
                ["Network service on port %d (%s): %s" % (n["port"], "with auth" if n["auth"] else "no auth", n["purpose"]) for n in f.get("network", [])]
-        tags = ['<span class="tag">%s</span>' % ("MPC Sample OS" if s["device"] == "mpc-sample" else "Alt firmware"), '<span class="tag">%s</span>' % e(s["license"])] + \
+        tags = ['<span class="tag">%s</span>' % ("MPC Sample OS" if s["device"] == "mpc-sample" else "Alt OS"), '<span class="tag">%s</span>' % e(s["license"])] + \
                ['<span class="tag warn">%s</span>' % e(w) for w in warn]
         t = sorted(s["tested"], key=lambda r: r["date"])[-1]
         rows = [("Version", e(s["version"])),
@@ -190,7 +190,7 @@ def render(catalog, pages=(), helper_hashes=None, patches_html="", apps_html="",
     return tpl.replace("/*GUIDES*/", guides).replace("/*NAV*/", nav_html(list(pages), "index")).replace("/*SITE_CSS*/", read("site.css")) \
         .replace("/*PATCHES_HTML*/", patches_html).replace("/*APPS_HTML*/", apps_html) \
         .replace("/*N_PATCHES*/", str(n_patches)).replace("/*N_APPS*/", str(n_apps)) \
-        .replace("/*FIRMWARE_HTML*/", fw_html).replace(marker, data)
+        .replace("/*ALT_OS_HTML*/", fw_html).replace(marker, data)
 
 
 def atom(catalog, base="", title="Open MPC - Plugin Catalog: new releases", ident="releases", path="feed.xml"):
@@ -391,7 +391,7 @@ def main():
     ap.add_argument("--out", default="catalog/dist/site")
     ap.add_argument("--pages", default="catalog/pages", help="folder of guide pages (Markdown)")
     ap.add_argument("--apps", default="catalog/apps.json", help="companion apps (desktop tools) for the catalog page's Companion apps tab; <out>/../apps.json (app_resolve.py output) is used instead when it exists")
-    ap.add_argument("--firmware", default="catalog/firmware.json", help="alternative firmware for the MPC Sample and the standalone MPCs, for the firmware tab; published as firmware.json if it exists")
+    ap.add_argument("--alt-os", default="catalog/alt_os.json", help="alternative OS for the MPC Sample and the standalone MPCs, for the Alt OS tab; published as alt_os.json if it exists")
     ap.add_argument("--patches", default="catalog/patches.json", help="device patches the installer app may offer (docs/PATCHES.md); published as patches.json if it exists")
     ap.add_argument("--base-url", default="", help="public site URL, for the feed's self link")
     a = ap.parse_args()
@@ -422,19 +422,19 @@ def main():
         if errors:
             raise SystemExit("catalog/apps.json is not valid:\n  " + "\n  ".join(errors))
     fw_doc = None
-    if os.path.isfile(a.firmware):
-        import firmware_check
-        fw_doc = json.load(open(a.firmware, encoding="utf-8"))
-        errors, _ = firmware_check.check(fw_doc)
+    if os.path.isfile(a.alt_os):
+        import alt_os_check
+        fw_doc = json.load(open(a.alt_os, encoding="utf-8"))
+        errors, _ = alt_os_check.check(fw_doc)
         if errors:
-            raise SystemExit("catalog/firmware.json is not valid:\n  " + "\n  ".join(errors))
+            raise SystemExit("catalog/alt_os.json is not valid:\n  " + "\n  ".join(errors))
     patches_html = next((p["html"] for p in pages if p["slug"] == "patches"), "")
     helpers = [("mpc-store.sh", os.path.join(HERE, "mpc-store.sh")), ("sync.sh", os.path.join(HERE, "release", "sync.sh")),
                ("plugin_list.awk", os.path.join(HERE, "release", "plugin_list.awk"))]
     hashes = {name: hashlib.sha256(open(path, "rb").read()).hexdigest() for name, path in helpers}
     open(os.path.join(a.out, "index.html"), "w", encoding="utf-8").write(render(catalog, pages, hashes, patches_html, app_cards(apps_doc) if apps_doc else "",
                                                                                     len(patches_doc["patches"]) if patches_doc else 0, len(apps_doc["apps"]) if apps_doc else 0,
-                                                                                    firmware_cards(fw_doc) if fw_doc else "", len(fw_doc["systems"]) if fw_doc else 0))
+                                                                                    alt_os_cards(fw_doc) if fw_doc else "", len(fw_doc["systems"]) if fw_doc else 0))
     for pg in pages:
         open(os.path.join(a.out, pg["slug"] + ".html"), "w", encoding="utf-8").write(render_page(pg, pages))
     open(os.path.join(a.out, "feed.xml"), "w", encoding="utf-8").write(atom(catalog, a.base_url))
@@ -442,7 +442,7 @@ def main():
     if apps_doc is not None:
         shutil.copy(a.apps, os.path.join(a.out, "apps.json"))
     if fw_doc is not None:
-        shutil.copy(a.firmware, os.path.join(a.out, "firmware.json"))
+        shutil.copy(a.alt_os, os.path.join(a.out, "alt_os.json"))
     if patches_doc is not None:
         shutil.copy(a.patches, os.path.join(a.out, "patches.json"))
     for name, path in helpers:   # the files a device downloads next to catalog.tsv, checked against the hashes listed in it
