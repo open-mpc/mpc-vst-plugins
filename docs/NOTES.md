@@ -4,6 +4,26 @@ Origin: mpc-forums thread "Proof of Concept: Custom Standalone Plugins"
 (viewtopic.php?f=48&t=220981, Sep 2026). Verified on a Force (MPC OS, with MockbaMod) 2026-09-23; paths below are
 from the Force and may differ on MPC Live/One/X/Key (e.g. `Force Documents` vs `MPC Documents`).
 
+## 2026-11-24: 3.10.1 autorun — Developer Panel offers an *unsigned* `autorun.sh` (device: Live III, 3.10.1.12, user screenshot)
+
+- The stock **Developer Panel** info dialog (Preferences > Enhancements) reads, verbatim: "Adds a Developer Mode to the mode
+  menu, containing a system shell and many developer utilities. **Also offers to run an unsigned `autorun.sh` from any
+  attached drive.**" The shell "gives full access to this product's Linux system, with the same rights as the product itself,
+  as though you were logged in over ssh"; it also starts the SSH server (matches the Developer-mode SSH-as-root note elsewhere).
+- So on 3.10.x there are **two** autorun routes, not one: (a) the un-gated public path is the signed `*.scriptpkg` verified by
+  `/usr/bin/az01-signed-fs` (see 2026-10-23) — needs Akai's key, a wall for us; (b) with the Developer Panel on, MPC offers to
+  run a **plaintext, unsigned `autorun.sh`** from any attached drive, as root. The old 3.9.x salted `autorun.check` is gone
+  either way.
+- **This supersedes** the framing in the 2026-10-23 entry ("signed-package scheme replacing the salted-hash check") — accurate
+  for the *public* path, but it missed that a dev-gated unsigned `autorun.sh` is the sanctioned replacement for hands-on use.
+  `docs/USB_STICK.md` and `docs/GEN2.md` carry the same incomplete framing and should be updated when touched.
+- Cross-repo note: `open-mpc/mpc-controllers` (FINDINGS 7/8) reports autorun on 3.10 as "plain unsalted SHA-256 `autorun.check`,
+  no signing" from an offline binary read (an "ACVG" 3.10 build). That does not match the shipping 3.10.1.12 dialog here; likely
+  a different/earlier build or the Lua device-script salt conflated with autorun. Left unreconciled — resolve against the actual
+  3.10.1.12 binary before stating a hash/signature mechanism as fact.
+- Still unverified by us on a device: whether the `autorun.sh` prompt runs the script silently or with the "Script detected…"
+  confirm; exact drive/path it scans; and whether Developer mode must be on at insert time or just once-enabled.
+
 ## 2026-11-17: addins are not loaded on Hakai, whose launcher sets LD_PRELOAD itself (user report; fixed offline only)
 - First reported in jacob-sabella/mpc-addin-usb-audio#4 (2026-10, MPC One, HAKAI 3.9.1, then 3.10; device, by the reporter)
   and again in jacob-sabella/mpc-addin-remote#7 (HAKAI 3.10): the addin installs, `install.sh` warns that MPC came up
