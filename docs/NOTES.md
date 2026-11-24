@@ -2990,10 +2990,14 @@ exit 0
 
 State left on the stick: `autorun.sh` (T1 tag) and one `AUTORUN_MARKER_T1-root-devOFF_20261124-120908.txt`. Nothing else changed on the device.
 
-## 2026-11-24: MPC Sample 1.4.0.8 (emulator, QEngine, mpc-compat-tests `mpc-sample-140`; not yet checked on a device)
+## 2026-11-24: MPC Sample 1.4.0.8 (emulator, QEngine, mpc-compat-tests `mpc-sample-140`; the settings files also on a device)
 
 - **Settings moved** to `/data/Settings/MPC Sample/MPC Sample.settings` (1.3.0.12: `/data/Settings/Akai/MPC Sample/...`). The
   installers' and the desktop app's glob missed it ("MPC.settings not found" on every route); they now look in both places.
+- **Device, updated from 1.3:** both files are there. 1.3's is left as it was (its plugin list included) and 1.4 starts a new one
+  with only the card's `Synths` in SynthContentLocations; it does not carry 1.3's plugins over. The lookups took the first match
+  of `ls`, which sorts `Settings/Akai/...` first, so every installer would have edited 1.3's file. They now take the first file
+  that exists in their own order, 1.4's before 1.3's. Switching VST2 Support on did not change the file while MPC kept running.
 - **VST2 Support switch.** Preferences > Enhancements, the same keys as MPC OS 3.10.1 (`Enhancements.Enabled`,
   `Enhancements.VST2Support`). With them off MPC never tries to load a plugin in the project; with them on it does.
 - **The card is remounted exec by MPC.** With VST2 Support on, the first time MPC loads a plugin from the SD card it remounts the

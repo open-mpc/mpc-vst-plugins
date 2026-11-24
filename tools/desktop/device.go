@@ -28,7 +28,7 @@ type Config struct {
 	ModelFile    string // the device's model name ("/proc/device-tree/model")
 	MPCBin       string // MPC's program, which carries its version text ("3.10.1.6 (69e2df86f00)")
 	VST2Globs    string // drives that may hold a "VST2 Plugins" folder (MPC OS 3.10.1+), shell words: "/nvme /media/*"
-	SettingsGlob string // where MPC.settings is
+	SettingsGlob string // where MPC.settings is, shell words in order of preference: the first file that exists is used
 	MountsFile   string // the list of mounts, "/proc/mounts"
 	AddinsDir    string // where addins live, one folder each: "/data/mpc-addins"
 	LibcPaths    string // where to look for the device's libc, shell words (globs allowed), to read its glibc version
@@ -40,7 +40,7 @@ func defaultConfig() Config {
 	// One, a Key 37; the firmware mounts /nvme or /storage from device tree flags). The extra entries are harmless on
 	// Gen1/Force (neither exists); SettingsGlob already finds /data. The first SynthsAlt found is promoted to the primary
 	// "internal drive" when /sdcard is absent (see readInfo).
-	return Config{Port: "22", User: "root", RemoteTmp: "/tmp", SynthsDir: "/sdcard/Synths", SynthsAlt: "/nvme/Synths /storage/Synths", RootGlobs: "/sdcard/Synths /nvme/Synths /storage/Synths /media/*/Synths", VST2Globs: "/sdcard /nvme /storage /media/*", ModelFile: "/proc/device-tree/model", MPCBin: "/usr/bin/MPC", DriveGlob: "/media/* /nvme /storage", MountsFile: "/proc/mounts", SettingsGlob: "/media/az01-internal/Settings/*/MPC.settings /data/Settings/*/MPC.settings /data/Settings/*/MPC?Sample/MPC?Sample.settings /data/Settings/MPC?Sample/MPC?Sample.settings", AddinsDir: "/data/mpc-addins",
+	return Config{Port: "22", User: "root", RemoteTmp: "/tmp", SynthsDir: "/sdcard/Synths", SynthsAlt: "/nvme/Synths /storage/Synths", RootGlobs: "/sdcard/Synths /nvme/Synths /storage/Synths /media/*/Synths", VST2Globs: "/sdcard /nvme /storage /media/*", ModelFile: "/proc/device-tree/model", MPCBin: "/usr/bin/MPC", DriveGlob: "/media/* /nvme /storage", MountsFile: "/proc/mounts", SettingsGlob: "/data/Settings/*/MPC.settings /media/az01-internal/Settings/*/MPC.settings /data/Settings/MPC?Sample/MPC?Sample.settings /data/Settings/*/MPC?Sample/MPC?Sample.settings", AddinsDir: "/data/mpc-addins",
 		LibcPaths: "/lib/libc.so.6 /lib/arm-linux-gnueabihf/libc.so.6 /usr/lib/libc.so.6 /lib/libc-*.so /usr/lib/libc-*.so"}
 }
 
@@ -425,10 +425,13 @@ func (d *Device) Run(cmd string, stdin io.Reader, onLine func(string)) (int, err
 }
 
 func (d *Device) readInfo(host, fp string) error {
+	// ST: the first settings file that exists, in SettingsGlob's order (not ls's, which sorts: an MPC Sample updated to 1.4 keeps
+	// 1.3's file under Settings/Akai, which sorts first)
 	script := fmt.Sprintf(`S=%s
+ST=$(for f in %s; do [ -f "$f" ] && { echo "$f"; break; }; done)
 TAB=$(printf '\t')
 echo "arch=$(uname -m)"; echo "uid=$(id -u)"; echo "synths=$S"
-echo "settings=$(ls %s 2>/dev/null | head -n 1)"
+echo "settings=$ST"
 echo "tmpfree=$(df -kP %s 2>/dev/null | awk 'NR==2 {print $4}')"
 command -v tar >/dev/null 2>&1 && echo tar=1
 command -v systemctl >/dev/null 2>&1 && echo systemctl=1
@@ -474,10 +477,10 @@ for v in %s ""; do   # drives with no Synths folder yet, which the app can give 
   free=$(df -kP "$v" 2>/dev/null | awk 'NR==2 {print $4}')
   printf 'drive=%%s\t%%s\t%%s\t%%s\n' "$v" "$fs" "$nx" "${free:-0}"
 done
-SET=$(ls %s 2>/dev/null | head -n 1)
+SET=$ST
 if [ -n "$SET" ]; then sed -n 's/.*<Location>\(.*\)<\/Location>.*/loc=\1/p' "$SET"; fi
 mval() { sed -n "s/^$1=//p" "$2" | head -n 1 | sed -e 's/^"\([^"]*\)".*/\1/;t' -e "s/^'\\([^']*\\)'.*/\\1/;t" -e 's/[[:space:]]*#.*//'; }
-V=$(ls %s 2>/dev/null | head -n 1)
+V=$ST
 if [ -n "$V" ]; then
   if grep -q 'Enhancements.VST2Support" val="1"' "$V"; then echo vst2=on; elif grep -q 'Enhancements.VST2Support"' "$V"; then echo vst2=off; fi
 fi
@@ -503,7 +506,7 @@ for d in %s/*/; do
   u=0; [ -f "${d}uninstall.sh" ] && u=1
   printf 'addin=%%s\t%%s\t%%s\t%%s\n' "$(basename "$d")" "$(mval ADDIN_VERSION "$f")" "$u" "$(mval ADDIN_NAME "$f")"
 done
-true`, shQuote(d.cfg.SynthsDir), d.cfg.SettingsGlob, shQuote(d.cfg.RemoteTmp), d.cfg.LibcPaths, shQuote(d.cfg.MountsFile), d.cfg.RootGlobs, d.cfg.DriveGlob, d.cfg.SettingsGlob, d.cfg.SettingsGlob, d.cfg.VST2Globs, shQuote(d.cfg.ModelFile), shQuote(d.cfg.MPCBin), vst2Globs(d.cfg.VST2Globs)+` `+d.cfg.RootGlobs, shQuote(d.cfg.AddinsDir))
+true`, shQuote(d.cfg.SynthsDir), d.cfg.SettingsGlob, shQuote(d.cfg.RemoteTmp), d.cfg.LibcPaths, shQuote(d.cfg.MountsFile), d.cfg.RootGlobs, d.cfg.DriveGlob, d.cfg.VST2Globs, shQuote(d.cfg.ModelFile), shQuote(d.cfg.MPCBin), vst2Globs(d.cfg.VST2Globs)+` `+d.cfg.RootGlobs, shQuote(d.cfg.AddinsDir))
 	info := DeviceInfo{Host: host, Fingerprint: fp, Synths: d.cfg.SynthsDir, Installed: []string{}, Store: map[string]string{}, Stores: map[string]map[string]string{}}
 	var lines []string
 	var mu sync.Mutex

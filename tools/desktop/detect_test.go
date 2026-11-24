@@ -66,13 +66,20 @@ func TestSample14VST2SupportIsNotVST2Mode(t *testing.T) {
 	os.MkdirAll(filepath.Join(fd.dir, "Settings", "MPC Sample"), 0o755)
 	os.WriteFile(filepath.Join(fd.dir, "Settings", "MPC Sample", "MPC Sample.settings"),
 		[]byte("<PROPERTIES>\n  <VALUE name=\"Enhancements.VST2Support\" val=\"1\"/>\n</PROPERTIES>\n"), 0o644)
+	// a Sample updated from 1.3 keeps 1.3's file (Settings/Akai/MPC Sample, device 2026-11-24), which ls would sort first
+	os.MkdirAll(filepath.Join(fd.dir, "Settings", "Akai", "MPC Sample"), 0o755)
+	os.WriteFile(filepath.Join(fd.dir, "Settings", "Akai", "MPC Sample", "MPC Sample.settings"), []byte("<PROPERTIES>\n</PROPERTIES>\n"), 0o644)
 	cfg := fd.cfg()
-	cfg.SettingsGlob = filepath.Join(fd.dir, "Settings", "MPC?Sample", "MPC?Sample.settings")
+	cfg.SettingsGlob = filepath.Join(fd.dir, "Settings", "MPC?Sample", "MPC?Sample.settings") + " " +
+		filepath.Join(fd.dir, "Settings", "*", "MPC?Sample", "MPC?Sample.settings")
 	d, err := Dial("127.0.0.1", "secret", cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer d.Close()
+	if want := filepath.Join(fd.dir, "Settings", "MPC Sample", "MPC Sample.settings"); d.Info.Settings != want {
+		t.Fatalf("1.4's settings file must win over 1.3's: got %q", d.Info.Settings)
+	}
 	if d.Info.Device() != "mpc-sample" {
 		t.Fatalf("a Sample's settings file must read as a Sample: %q", d.Info.Settings)
 	}
