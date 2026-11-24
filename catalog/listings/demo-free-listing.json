@@ -1,0 +1,11 @@
+{
+  "id": "demo-free-listing",
+  "name": "Demo Free Listing",
+  "author": "Example Audio",
+  "kind": "effect",
+  "source": "closed",
+  "price": "Free",
+  "shop_url": "https://example.com/demo-free-listing",
+  "summary": "A made-up free, closed-source listing that shows how a free card in Other sources looks (no support contact is needed for a free listing). It is not a real plugin: the link goes to example.com. Delete this file when the first real listing is added.",
+  "tags": ["demo", "example"]
+}

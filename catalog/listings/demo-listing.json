@@ -4,7 +4,7 @@
   "author": "Example Audio",
   "kind": "instrument",
   "source": "closed",
-  "price": "from $29",
+  "price": "$10",
   "shop_url": "https://example.com/demo-listing",
   "summary": "A made-up closed-source listing that shows how a card in Other sources looks. It is not a real plugin: the links go to example.com and nothing can be bought or downloaded. Delete this file when the first real listing is added.",
   "support": {"contact": "https://example.com/support", "response_days": 7},
