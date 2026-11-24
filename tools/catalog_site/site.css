@@ -459,3 +459,11 @@ details.more > dl.meta { margin-top: 4px; }
 .elsewhere a { color: var(--accent); font-weight: 600; }
 .chip.tagchip { text-transform: none; letter-spacing: 0; font: 500 13px/1 var(--text); }
 #tagchips .linkbtn { margin-left: 4px; }
+
+/* "What Open MPC provides": a short list of what the catalog does, under the masthead */
+.why { margin: 10px 0 14px; padding: 12px 0 6px; border-top: 1px solid var(--line); }
+.why h2 { margin: 0 0 8px; font: 700 14px/1.2 var(--display); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.why ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 24px; }
+.why li { font-size: 14px; line-height: 1.45; color: var(--muted); }
+.why li strong { display: block; color: var(--fg); font-weight: 650; margin-bottom: 1px; }
+.why code { font-size: 13px; }

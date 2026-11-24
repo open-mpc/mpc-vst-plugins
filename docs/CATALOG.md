@@ -301,7 +301,7 @@ for this, since installers read it. A formal data licence (for example CC BY 4.0
 ### Site
 Generated static HTML (`tools/catalog_site.py`, no JS framework): searchable/filterable grid, a page per plugin
 (screenshot, description, version history, install steps, source link, checksum, tested-on), a "recently updated"
-feed and an Atom feed. A collection is one card with its own view (Collections above). Fast-moving plugins are handled by the version list and the stable/beta channel split.
+feed and an Atom feed. A collection is one card with its own view (Collections above). The front page has a short "What Open MPC provides" list under the masthead (2026-11-24, offline: unit tests and screenshots at 1200 and 390 px; the Python browser tests were not run): review, per-release validation, device testing, checksums and kept versions, and the open data terms. Each line restates what the FAQ, "Validation" and "Trust tiers" already say, so change them together. Fast-moving plugins are handled by the version list and the stable/beta channel split.
 
 ### Installer / updater (later, optional)
 Same JSON, thin clients: (a) a BusyBox shell script on the device (`list`, `install <id>`, `update`, `remove`)
