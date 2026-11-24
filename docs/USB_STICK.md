@@ -15,6 +15,12 @@ Do you want to run it?" prompt code, 3.10 adds `*.scriptpkg` and `/usr/bin/az01-
 salted hash. This matches TheKikGen's prediction below. **A stick built by this tool will not be accepted once a device is
 updated to 3.10+;** it still works on any device still on 3.9.1 (or an earlier Gen1/Force build using the same scheme).
 
+**Correction (2026-11-24, device: Live III, 3.10.1.12 — see NOTES.md).** The signed `.scriptpkg` is only the *un-gated* route on
+3.10.x. The stock Developer Panel (Preferences > Enhancements) "also offers to run an unsigned `autorun.sh` from any attached
+drive" as root (its own dialog text). So 3.10.x has two autorun routes: signed `.scriptpkg` without Developer mode, and a
+plaintext unsigned `autorun.sh` with it. The salted-hash stick this tool builds is still dead on 3.10+, but an unsigned-`autorun.sh`
+stick for Developer-mode users is a route we have not yet tooled (prompt behaviour and scanned drive/path unverified by us).
+
 ## Easy stick: Eurikon's prebuilt release (2026-10-27, offline-tested only)
 
 The desktop app's no-SSH mode now leads with Eurikon's own stick (`Eurikon/plugin-manager-usb-for-open-mpc`, MIT, pinned to

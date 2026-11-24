@@ -52,7 +52,10 @@ Gen2 unit's stock MPC OS 3.9.1 as on Gen1/Force: inserting a stick with a signed
 on demand (not persistent across reboot; see `docs/USB_STICK.md` for the generator, offline-tested, not yet run by us on Gen2
 hardware). **MPC OS 3.10.0 removes this mechanism** — confirmed by a static diff of the stock update images: the `.check`/`open.sh`
 strings and the salt bytes are gone from 3.10.0's `MPC` binary, replaced by a `*.scriptpkg`/`az01-signed-fs` signed-package scheme.
-A device already updated to 3.10+ has no documented root route from this project, but Eurikon's plugin manager stick works there (confirmed on a Live III running stock 3.10, 2026-10-29, device: it opened on insertion because the helper, `Plugin Manager helper.xpa`, had been imported earlier and persisted in the shared `/nvme/MPC Documents`; the helper is still required once on 3.10); it runs only his manager, not our SSH or addin steps (his helper copies a fixed, hash-checked file list and never runs the stick's `open.sh`, read from its `bootstrap.sh` v1.2.2). (One unverified community report says a live
+(Correction 2026-11-24, device: Live III 3.10.1.12, see NOTES.md — the signed `.scriptpkg` is only the *un-gated* route; the stock
+Developer Panel "also offers to run an unsigned `autorun.sh` from any attached drive" as root, so Developer mode is itself a root
+route on 3.10+, in addition to its SSH server.)
+A device already updated to 3.10+ has no documented *un-gated* root route from this project, but Eurikon's plugin manager stick works there (confirmed on a Live III running stock 3.10, 2026-10-29, device: it opened on insertion because the helper, `Plugin Manager helper.xpa`, had been imported earlier and persisted in the shared `/nvme/MPC Documents`; the helper is still required once on 3.10); it runs only his manager, not our SSH or addin steps (his helper copies a fixed, hash-checked file list and never runs the stick's `open.sh`, read from its `bootstrap.sh` v1.2.2). (One unverified community report says a live
 OTA update to "3.10.0" left a device's rootfs still reporting "3.9.1" underneath — if real, that specific device might still take
 an old-scheme stick; not something to rely on.)
 
