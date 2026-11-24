@@ -2990,7 +2990,7 @@ exit 0
 
 State left on the stick: `autorun.sh` (T1 tag) and one `AUTORUN_MARKER_T1-root-devOFF_20261124-120908.txt`. Nothing else changed on the device.
 
-## 2026-11-24: MPC Sample 1.4.0.8 (emulator, QEngine, mpc-compat-tests `mpc-sample-140`; the settings files also on a device)
+## 2026-11-24: MPC Sample 1.4.0.8 (emulator, QEngine, mpc-compat-tests `mpc-sample-140`; device checks below)
 
 - **Settings moved** to `/data/Settings/MPC Sample/MPC Sample.settings` (1.3.0.12: `/data/Settings/Akai/MPC Sample/...`). The
   installers' and the desktop app's glob missed it ("MPC.settings not found" on every route); they now look in both places.
@@ -3006,4 +3006,10 @@ State left on the stick: `autorun.sh` (T1 tag) and one `AUTORUN_MARKER_T1-root-d
   started, so the card's `Synths` stays the install target on a Sample; the desktop app no longer treats a Sample's VST2 Support as
   MPC OS 3.10.1's VST2 mode.
 - MPC's main thread is named `<MPCSample>` (1.3: `MPC Sample`).
-- To check on a device: the remount, and whether 1.4's VST plugins page lists anything from `<card>/VST2 Plugins`.
+- **Device, VST2 and the remount:** with both switches in the settings file (written with MPC stopped), Tuner installed by
+  install.sh to `<card>/Synths` and put on the main output by RACK's apply helper loaded at MPC's start ("Initialising VST: tuner"),
+  and the card's mount lost `noexec`. The switches were kept across that restart. Switched on in Preferences instead, they were
+  gone after the next `systemctl stop`/start, and the file had not been written: whether a restart from MPC's own menu keeps them
+  is not checked. install.sh now says so instead of telling a 1.4 user to bind-mount.
+- Not checked: whether 1.4's VST plugins page lists anything from `<card>/VST2 Plugins`. The RACK addin's default `settings` is
+  still 1.3's path (its APPLY does not read it; its page does).

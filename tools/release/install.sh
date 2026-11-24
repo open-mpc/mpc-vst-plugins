@@ -95,7 +95,12 @@ OPTS=$(cd "$SYNTHS" 2>/dev/null && D=$(pwd -P) awk '{ m = $2; gsub(/\\040/, " ",
     if ((ENVIRON["D"] == m || index(ENVIRON["D"], m (m == "/" ? "" : "/")) == 1) && length(m) >= best) { best = length(m); o = $4 } }
     END { print o }' /proc/mounts 2>/dev/null)
 if printf '%s\n' "$OPTS" | grep -q '\(^\|,\)noexec\(,\|$\)'; then
-    if [ $SAMPLE = 1 ]; then
+    if [ $SAMPLE = 1 ] && grep -q 'name="Enhancements.VST2Support" val="1"' "$SETTINGS" 2>/dev/null; then
+        # MPC Sample 1.4 with VST2 Support on remounts its card exec itself when it loads a plugin (device, 2026-11-24)
+        echo "$SYNTHS is on a noexec mount; MPC Sample remounts it exec when it loads a plugin (VST2 Support is on)."
+    elif [ $SAMPLE = 1 ] && grep -a -q 'Enhancements.VST2Support' "${MPC_SAMPLE_BIN:-/usr/bin/MPC Sample}" 2>/dev/null; then
+        echo "warning: VST2 Support is off, so MPC Sample loads no plugin. Turn on Preferences > Enhancements > Enable Enhancements and VST2 Support; MPC then remounts the card exec itself when it loads one. (On 1.4.0.8 the switches were not kept across a restart of MPC: check them again after this install.)"
+    elif [ $SAMPLE = 1 ]; then
         echo "warning: $SYNTHS is on a noexec mount (the MPC Sample mounts its card noexec), so MPC will not be able to load this plugin from it. Bind the folder onto itself and remount it exec: mount --bind \"$SYNTHS\" \"$SYNTHS\" && mount -o remount,bind,exec \"$SYNTHS\" (needed again after every restart of the Sample)."
     else
         echo "warning: $SYNTHS is on a noexec mount, so MPC will not be able to load this plugin from it. Install on the internal drive (-t /sdcard/Synths), or on Gen1 apply the Auto exec patch (tools/mpc_patch/auto_exec)."

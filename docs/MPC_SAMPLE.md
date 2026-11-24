@@ -52,7 +52,9 @@ from the device (add, remove, on/off, APPLY); the Plugin Manager's catalog marks
   `/etc/edisksd/main.conf` can change that; see `docs/AZ0X_SOURCE.md`). This is the origin of the `noexec`.
 - A bind mount of `<card>/Synths` remounted `exec` makes plugins loadable, **but it is lost at reboot**, and then every
   plugin fails to load without any message (NOTES 2026-11-05). Check the mount, not just the file, when a plugin "does
-  nothing" after a restart.
+  nothing" after a restart. That is 1.3.
+- **1.4:** with Preferences > Enhancements > Enable Enhancements and VST2 Support on, MPC remounts the card without `noexec`
+  itself when it loads a plugin, and no bind mount is needed (device, 2026-11-24, NOTES). With VST2 Support off it loads none.
 - The drive's folder name keeps spaces (`edisksd` only changes `/` to `_`), so installers and scripts must quote paths.
 - `/data` is executable but is not a plugin location MPC scans.
 
