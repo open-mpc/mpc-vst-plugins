@@ -4,8 +4,7 @@
   "author": "Elsewave",
   "repo": "shhQuiet/DriftwaterMPC",
   "kind": "effect",
-  "license": "LicenseRef-Elsewave-Driftwater-NonCommercial",
-  "source_available": true,
+  "license": "MIT AND GPL-3.0-only",
   "min_os": "3.10.1",
   "style": "modulation",
   "tags": [
