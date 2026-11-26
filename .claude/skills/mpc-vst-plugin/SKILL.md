@@ -187,6 +187,11 @@ Parameter entries feeding `gen_vst.py` (`tools/params.py` format) can carry:
   on each one, which broke Q-Links on the automation screen (NOTES 2026-10-21). Polled readouts catch up within 100 ms.
   A param that other unpolled text depends on (a machine selector behind `dynamic_name` labels, a `"poll": false`
   readout bound with `get=`, or a `when=` panel that follows a param the engine derives from this one) takes `"refresh_display": true` to ask for one on its writes. `step_of` buttons always ask.
+- Each UpdateDisplay also restarts MPC's PRESET drawer. A screen that lights tiles or changes text while playing (a
+  playhead) can keep it from opening: `"defines"` `ON_NO_UPDATE_PREFIX` (tiles with that key prefix report by automate
+  only) and `LIT_UPDATE_ON_TEXT_POLL` (one UpdateDisplay 100 ms after the first change) bring it to one a bar or less.
+  `ECHO_GUARD_POLLED_ONLY` lets `"poll": false` list tiles act at every touch; `OPTION_ANSWER_INDEX` reads a numeric option
+  answer as an index first (docs/PORTING.md section 2).
 - `"automatable": false` -- `param_t.automatable`: `effCanBeAutomated` says no, keeping UI plumbing (browsers, page and prev/next
   buttons, readouts) out of MPC's automation lists. MPC caches it at load, so turning it off later drops saved lanes; Q-Link/CC
   response of such a param is not yet checked on a device (docs/PORTING.md section 2).

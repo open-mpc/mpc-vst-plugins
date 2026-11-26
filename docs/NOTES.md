@@ -3147,3 +3147,30 @@ State left on the stick: `autorun.sh` (T1 tag) and one `AUTORUN_MARKER_T1-root-d
   app (`modeslot: installed: Force 3.10.1`) and it survived a reboot.
 - Lesson: editing the upper directory with `sed -i` (new inode) behind a mounted overlay left `/etc` showing the old file; `etc_refresh`
   (drop_caches) or an in-place write fixes the view, and a reboot always does.
+
+## 2026-11-26: five optional wrapper behaviours and a `pthread_once`, from Cadenza's toolchain branch (device: Force, MPC OS 3.9.1; MPC One, MPC OS 3.10.1)
+- Origin: six commits on `Shrekage2024/mpc-vst-plugins` branch `chordseq/open-mpc` over `52c1fb0` (2026-11-13), the toolchain
+  Cadenza 0.28.1 ships with; they apply here without conflict. All five options are off by default, so a port that sets
+  none builds as before. Device evidence below: Cadenza's own test history on a Force, MPC OS 3.9.1
+  ([tested.json](https://github.com/Shrekage2024/cadenza-force/blob/main/tested.json)), and a run of Cadenza built on this
+  branch on an MPC One, MPC OS 3.10.1, 2026-11-26.
+- `ON_NO_UPDATE_PREFIX`, `LIT_UPDATE_ON_TEXT_POLL`: every `audioMasterUpdateDisplay` makes MPC re-list the programs, which restarts
+  its PRESET drawer's slide-in. Cadenza's PLAY page lights a playhead tile each beat and changes readouts at bar lines: the
+  drawer restarted about five times a second and could not be used while playing (Force, Cadenza 0.22.0). With playhead tiles
+  (`"ph_"`) reporting by automate alone and the remaining UpdateDisplays held 100 ms from the first change: one restart in about
+  two bars (Force, Cadenza 0.28.1, 100 frames), and on the MPC One the drawer opens and stays open while playing, restarting
+  at most once a bar.
+- `ECHO_GUARD_POLLED_ONLY`: Cadenza's bar-editor buttons (DONE, CANCEL, LOCK) are `"poll": false` list tiles that never light.
+  The echo guard kept their second and later touches from acting until a poll reset it, and no poll comes (Force, Cadenza
+  0.24.0 before its release fix). With the guard kept to polled tiles, every touch acts (Force; MPC One: LOCK and UNLOCK
+  three times in a row, DONE and CANCEL each time).
+- `OPTION_ANSWER_INDEX`: Cadenza answers every option param with its index, and its MIDI channel options are labelled
+  "1".."16"; since #859 the answer "9" reads as the label "9", index 8, so channels and GATE read back wrong. With a numeric
+  answer taken as the index first, a new instance shows channels 1, 2, 3 and GATE 100 % (Force, Cadenza 0.28.1; MPC One).
+- `g_api` under `pthread_once`: two instances created on two threads at once share one engine table instead of racing on it; no
+  visible effect in a device run.
+- `NO_ENGINE_CHANGED`: leaves out the `mpc_engine_changed` hook, whose weak undefined reference does not link on Apple
+  platforms (Mach-O), for an engine also built for macOS and iOS. Not tested here: no Apple build.
+- Offline: `tools/test_port.sh` PASSED with Cadenza's `vst.json` (all five on; its engine's ALSA port needs the LeakSanitizer
+  suppression Cadenza's own tests use, `leak:alsa_open`) and with `poc/steptest`, `poc/polltest` and `poc/selfset` (all off).
+  `vst3_wrap.c` is unchanged: the options answer MPC's VST2 host.

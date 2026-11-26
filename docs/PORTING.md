@@ -78,7 +78,21 @@ for the pattern). This applies to every future port, not just ones that hit the 
       own, say) can instead define `mpc_engine_changed()` (`wrapper/engine.h`) and return each key it changed: the wrapper
       tells the host as it does for a MIDI CC (at most every 1024 frames per control; an option list also gets an
       UpdateDisplay), so the screen follows, and nothing is polled. Nothing to set in vst.json
-      (`poc/selfset` is the test engine).
+      (`poc/selfset` is the test engine). An engine also built for Apple platforms (macOS, iOS), where the hook's weak
+      undefined reference does not link, sets `"defines": {"NO_ENGINE_CHANGED": 1}` to leave it out.
+- [ ] Optional, a screen that changes while it plays (a playhead, a bar counter): every `audioMasterUpdateDisplay` makes MPC
+      re-list the programs, which restarts its PRESET drawer's slide-in, so a screen that asks for one each beat keeps the
+      drawer from opening. `"ON_NO_UPDATE_PREFIX": "\"ph_\""` makes list tiles whose key starts with that prefix report
+      their lit state by automate alone, with no UpdateDisplay; `"LIT_UPDATE_ON_TEXT_POLL": 1` holds the UpdateDisplay that a
+      lit tile, a polled text or `display_rev` asks for 100 ms from the first such change, so the cells that change together
+      (a bar line) cost one, although the polls read them at different blocks (not with `DISPLAY_REV_THREAD`). Both off by
+      default; device: Cadenza on a Force (MPC OS 3.9.1) and an MPC One (MPC OS 3.10.1), NOTES 2026-11-26.
+- [ ] Optional, list tiles with `"poll": false` that MPC reads back as 0 (tiles that never light, used as buttons):
+      the list-tile echo guard ignores a second 1 until a poll resets it, and an unpolled tile is never polled, so it acts on
+      its first touch only. `"ECHO_GUARD_POLLED_ONLY": 1` keeps the guard to polled tiles. Off by default.
+- [ ] Optional, an engine that answers every option param with its index while some labels are numbers ("1".."16"):
+      since #859 an exact label wins, so the answer "9" reads as the label "9", index 8. `"OPTION_ANSWER_INDEX": 1` takes a
+      fully numeric answer as the index first, as before #859. Off by default (VST2 wrapper only).
 - [ ] Never hardcode `/sdcard/...` in an engine. Set `"defines": {"MODULE_SUBDIR": "\"engine\""}` in vst.json and
       the wrapper passes `<dir of the .so>/engine` to `create()`, found at runtime with `dladdr` (`wrapper/plugin_dir.h`,
       also usable directly via `mpc_plugin_dir()`), so the plugin works from `/sdcard/Synths`, `/media/*/Synths` or anywhere
