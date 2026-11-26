@@ -69,30 +69,30 @@ static inline void ftz_restore(uint64_t saved) {
                                  * UpdateDisplay from elsewhere (a preset pick): show live numbers as pictures. */
 #endif
 #ifndef ON_NO_UPDATE_PREFIX
-/* (local, Chord Seq) a key prefix, e.g. "ph_": a list tile whose key starts with it reports a lit-state change by
+/* A key prefix, e.g. "ph_": a list tile whose key starts with it reports a lit-state change by
  * audioMasterAutomate only, with no UpdateDisplay. MPC answers every UpdateDisplay by re-listing the programs, which
  * restarts its PRESET drawer; a playhead that lights a tile each beat would do that each beat. Unset: every lit change
  * also asks for an UpdateDisplay, as before. */
 #endif
 #ifndef LIT_UPDATE_ON_TEXT_POLL
-#define LIT_UPDATE_ON_TEXT_POLL 0 /* (local, Chord Seq) 1: the UpdateDisplay a lit-state, polled-text or display_rev change asks
+#define LIT_UPDATE_ON_TEXT_POLL 0 /* 1: the UpdateDisplay a lit-state, polled-text or display_rev change asks
                                    * for waits 100 ms from the first such change, so lit tiles, texts and a display_rev that change
                                    * together (a bar line) cost MPC one UpdateDisplay, though the polls read them at different
                                    * blocks: each one restarts MPC's PRESET drawer. Not with DISPLAY_REV_THREAD. */
 #endif
 #ifndef ECHO_GUARD_POLLED_ONLY
-#define ECHO_GUARD_POLLED_ONLY 0 /* (local, Chord Seq) 1: the list-tile echo guard in set_param_now skips "poll": false params.
+#define ECHO_GUARD_POLLED_ONLY 0 /* 1: the list-tile echo guard in set_param_now skips "poll": false params.
                                   * Only the "<key>_on" poll pushes an echo, and only that poll resets the guard, so an unpolled
                                   * tile MPC reads back as 0 (one that never lights) sends 1 at every touch and acted on the first
                                   * one only. Unset: every list tile is guarded, as before. */
 #endif
 #ifndef OPTION_ANSWER_INDEX
-#define OPTION_ANSWER_INDEX 0 /* (local, Cadenza) 1: a fully numeric answer for an option param is the option's index, before
+#define OPTION_ANSWER_INDEX 0 /* 1: a fully numeric answer for an option param is the option's index, before
                                * any label match (as before #859). For an engine that answers every option with its index: with
                                * labels that are numbers ("1".."16"), the answer "9" would otherwise match the label "9" (index 8). */
 #endif
 #ifndef NO_ENGINE_CHANGED
-#define NO_ENGINE_CHANGED 0 /* (local, Cadenza) 1: no mpc_engine_changed hook (engine.h). Its weak undefined reference does not link
+#define NO_ENGINE_CHANGED 0 /* 1: no mpc_engine_changed hook (engine.h). Its weak undefined reference does not link
                              * on Apple platforms (Mach-O), where an engine without the hook is built for macOS and iOS too. */
 #endif
 #ifndef PARAM_TEXT_MAX
