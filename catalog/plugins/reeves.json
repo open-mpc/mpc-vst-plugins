@@ -1,0 +1,19 @@
+{
+  "id": "reeves",
+  "name": "REEVES",
+  "author": "swtdr34mz",
+  "repo": "swtdr34mz-afk/REEVES",
+  "kind": "instrument",
+  "license": "MPL-2.0",
+  "summary": "A Rev2-style bi-timbral poly, 8 or 16 voices: two shape-modulated oscillators, sub, noise, sync, a 4-pole/2-pole low-pass, three envelopes, four LFOs, eight mod slots, an effect per layer, arp, poly and gated sequencers, unison, stack and split. ECO and HIGH quality. Panel-style touch pages per layer.",
+  "style": "polysynth",
+  "tags": [
+    "analog-modelling",
+    "polyphonic",
+    "subtractive",
+    "arpeggiator",
+    "sequencer"
+  ],
+  "asset_pattern": "REEVES-*-mpc-armv7.zip",
+  "screenshot": "https://raw.githubusercontent.com/swtdr34mz-afk/REEVES/v1.1.1/mpc/catalog/screenshot.png"
+}

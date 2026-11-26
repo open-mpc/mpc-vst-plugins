@@ -1,0 +1,5 @@
+{ "id": "beat-and-dungeon", "name": "Beat & Dungeon", "author": "Gonzi Audio", "repo": "gonziWeb/beat-and-dungeon",
+  "kind": "instrument", "style": "utility", "tags": ["game", "creativity", "workflow", "beatmaking"], "license": "MIT",
+  "summary": "A role-playing game for beatmakers: the project is a dungeon, each track a room, and a D20 sets the rule for the next one (sound, tempo, curses, creatures, gold to spend at the merchant). It plays no sound itself: it guides your beat. English. Built with the Akai MPC Plugin SDK; Gen1 and Gen2.",
+  "screenshot": "https://raw.githubusercontent.com/gonziWeb/beat-and-dungeon/v1.1.0/screenshots/01-cover.png",
+  "homepage": "https://beatanddungeon.gonz-music.fr/" }

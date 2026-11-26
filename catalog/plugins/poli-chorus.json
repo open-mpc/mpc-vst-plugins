@@ -1,0 +1,17 @@
+{
+  "id": "poli-chorus",
+  "name": "Poli-Chorus",
+  "author": "Poli",
+  "repo": "Adison-Negron/Poli-Plugins",
+  "kind": "effect",
+  "style": "modulation",
+  "tags": [
+    "chorus",
+    "ensemble",
+    "vibrato"
+  ],
+  "license": "MIT",
+  "summary": "Chorus-ensemble with Classic, Ensemble and Vibrato modes, a live LFO display, feedback, width, filter, warmth and 51 presets. Gen2 only.",
+  "asset_pattern": "Poli-Chorus-*-mpc-aarch64.zip",
+  "collection": "poli"
+}

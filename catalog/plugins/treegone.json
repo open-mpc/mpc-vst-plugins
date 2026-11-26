@@ -1,0 +1,19 @@
+{
+  "id": "treegone",
+  "name": "TREEGONE",
+  "author": "swtdr34mz",
+  "repo": "swtdr34mz-afk/TREEGONE",
+  "kind": "instrument",
+  "license": "MPL-2.0",
+  "summary": "A Trigon-6-style 6- or 12-voice poly: three oscillators with blended shapes, sync, osc 3 LO, noise, feedback and drive, three filters (4-pole OTA, ladder, 2-pole SVF), two ADSRs, audio-rate LFO, poly mod, vintage, distortion, two effects, unison with chord memory, arp and poly sequencer. ECO and HIGH quality. Panel-style touch pages.",
+  "style": "polysynth",
+  "tags": [
+    "analog-modelling",
+    "polyphonic",
+    "subtractive",
+    "arpeggiator",
+    "sequencer"
+  ],
+  "asset_pattern": "TREEGONE-*-mpc-armv7.zip",
+  "screenshot": "https://raw.githubusercontent.com/swtdr34mz-afk/TREEGONE/b12e1e1691d7112abfdd87928c3497c55ef70a09/mpc/catalog/screenshot.png"
+}

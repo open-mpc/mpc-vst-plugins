@@ -217,8 +217,9 @@ for the pattern). This applies to every future port, not just ones that hit the 
       from vst.json `"sample_page"` (`tools/gen_vst.py` `sample_lines()`, `wrapper/sample_page.h`): a `"dial"` param
       stepped by the data dial and the < > keys (a `"programs"` param loads once the dial stops), up to three knobs per
       `"banks"` entry for K1-K3 with pickup (a knob moves its param only once it reaches the value), and `"lines"` readouts
-      (`"key"`, `"size"` 1-4, `"label"`, `"color"` `"#rrggbb"`; `gen_vst.py` rejects anything else). The page opens at the
-      host's first effMainsChanged, not at creation, so MPC's scan and probe instances open none; its knob, dial and preset
+      (`"key"`, `"size"` 1-4, `"label"`, `"color"` `"#rrggbb"`; `gen_vst.py` rejects anything else). The page opens on the
+      first audio block after the host's first effMainsChanged, not at creation, so MPC's scan and probe instances open
+      none, nor does the idle second instance MPC Sample 1.4 makes of a pad's Knob FX; its knob, dial and preset
       changes are applied at the start of the next audio block, never from the page's own threads.
       Space left over goes to the engine's `mpc_engine_sample_draw()` (`wrapper/engine.h`, a weak symbol; Tuner draws its
       needle there). The page needs mpc-addin-sample-draw-handler and is inert everywhere else; it is named after the
@@ -230,6 +231,12 @@ for the pattern). This applies to every future port, not just ones that hit the 
       stand-in draw handler and host under ThreadSanitizer: the page opens once, pickup, the dial (a programs dial loads
       after 250 ms and stops at the last program), and input, drawing, audio and host writes at once without a data race.
       Examples: Tuner, Keyscope, Stompbox.
+    - **Knob FX on the MPC Sample (1.4+):** an effect loaded as a Knob FX gets 6 params on the Sample's three knobs (and
+      SHIFT), set by `knobs` / `shiftKnobs` in `plugin.json` (Akai's SDK, docs/knob-fx.md). vst.json `"knob_fx"` sets them:
+      `"knobs"` and `"shift_knobs"`, up to 3 each, a param key, `{"key", "label"}` or `null`, and `"short_name"` (at most 12
+      characters). Without it, an effect with a `"sample_page"` gets its first bank on the knobs and its second on SHIFT,
+      labelled with the param names. `gen_vst.py` writes `build/knob-fx.json` (and prints the mapping); `release.py` adds it to
+      `plugin.json`. Keep labels to about 8 characters. Without either, the Sample puts params 0-5 there.
 
 ## 4. Device
 - [ ] The plugin is one folder, `/sdcard/Synths/<vendor> - VST - <name>/`: the `.so`, `Plugin Skins/`, `version.xml` and any data next to the `.so`.

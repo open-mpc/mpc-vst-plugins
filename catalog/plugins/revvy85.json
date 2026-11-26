@@ -1,0 +1,13 @@
+{
+  "id": "revvy85",
+  "name": "Revvy85",
+  "author": "Lichthaus",
+  "repo": "lichthaus/mpc-vst-revvy85",
+  "kind": "effect",
+  "style": "reverb",
+  "tags": ["emulation", "reverb", "vintage", "digital", "gen2"],
+  "license": "MIT",
+  "summary": "REV7-style 1985 digital reverb: an emulated HD6303 and YM3804 machine running your own V1.0 EPROM dump (not included), with the original programs, keys, display and memories, plus HP/LP and SEM-style input filters. Gen2 (aarch64) only.",
+  "asset_pattern": "*-mpc-aarch64.zip",
+  "screenshot": "https://raw.githubusercontent.com/lichthaus/mpc-vst-revvy85/v0.4.0/docs/screenshot.png"
+}

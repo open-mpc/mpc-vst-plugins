@@ -10,6 +10,7 @@ Standard library only.
 """
 import argparse
 import hashlib
+import html
 import json
 import os
 import posixpath
@@ -352,7 +353,7 @@ def check(zpath, catalog=False, expect_id=None, expect_repo=None, require_portab
             if not any(f == "payload/vst/" + e or f.startswith("payload/vst/" + e + "/") for f in files):
                 err("extra %s listed but not in payload" % e)
         entry = files["plugin.xml"].decode(errors="replace")
-        attr = dict(re.findall(r'(\w+)="([^"]*)"', entry))
+        attr = {k: html.unescape(v) for k, v in re.findall(r'(\w+)="([^"]*)"', entry)}
         if attr.get("file") != posixpath.join(m["so_dir"], m["so"]):
             err("plugin.xml file=%r doesn't match so_dir/so" % attr.get("file"))
         if attr.get("uid", "").lower() != str(m["uid"]).lower():
@@ -439,7 +440,7 @@ def check(zpath, catalog=False, expect_id=None, expect_repo=None, require_portab
                 if not any(f == base + e or f.startswith(base + e + "/") for f in files):
                     err("extra %s listed but not in the plugin folder" % e)
             entry = files.get(base + "plugin-meta.xml", b"").decode(errors="replace").strip()
-            attr = dict(re.findall(r'(\w+)="([^"]*)"', entry))
+            attr = {k: html.unescape(v) for k, v in re.findall(r'(\w+)="([^"]*)"', entry)}
             want_file = "%%payload-path%%/%s/%s" % (m["skin"], m["so"])
             if entry and attr.get("file") != want_file:
                 err("plugin-meta.xml file=%r, expected %r" % (attr.get("file"), want_file))

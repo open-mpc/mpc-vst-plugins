@@ -1,0 +1,5 @@
+{ "id": "phase", "name": "Phase", "author": "Stampman3000", "repo": "stampman3000-jpg/phase",
+  "kind": "instrument", "style": "polysynth", "tags": ["synth", "phase-distortion"], "license": "GPL-3.0-or-later",
+  "summary": "CZ-style phase distortion synth, from glassy sines to classic saws, with 32 factory presets. Built on Leo Kuroshita's CrispyZebra engine.",
+  "screenshot": "https://raw.githubusercontent.com/stampman3000-jpg/phase/v1.0.0/screenshots/phase.png",
+  "asset_pattern": "Phase-*-mpc-armv7.zip" }

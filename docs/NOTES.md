@@ -3113,3 +3113,61 @@ State left on the stick: `autorun.sh` (T1 tag) and one `AUTORUN_MARKER_T1-root-d
   MPC OS 3.10.1's VST2 mode.
 - MPC's main thread is named `<MPCSample>` (1.3: `MPC Sample`).
 - To check on a device: the remount, and whether 1.4's VST plugins page lists anything from `<card>/VST2 Plugins`.
+
+## 2026-11-24: MPC Sample 1.4.0.8, plugin pages on the device (device, MPC Sample)
+
+- **A pad's Knob FX is two instances.** Putting a plugin on one pad's Knob FX makes two instances; both get
+  effMainsChanged, only one ever gets processReplacing (a per-instance trace, 344 blocks of 128 frames a second at 44.1 kHz,
+  in place, one thread). In the project it is Submix 1's insert (`mixer.submixes[0].mixable.inserts`), and the pad's
+  `audioRoute` is destination 1 (submix), sub-index 0.
+- **The page waits for audio.** With a page opened at effMainsChanged, both instances registered a page under the same
+  name. `wrapper/sample_page.h` now starts a small thread at effMainsChanged that opens the page once the instance has
+  processed a block, so only the instance that plays has one (the idle one's thread exits at effClose). Offline only so
+  far: `tools/test_sample_page.sh` checks it (no page before audio, one after); not yet isolated on the device.
+- **Screen refreshes cost MPC audio.** The panel is SPI; while a draw-handler page refreshed the whole screen at 15 fps, MPC's
+  audio thread ran 252 blocks a second instead of 344, heard as stutter. Refreshing only the rows that changed, in separate
+  bands, kept all 344 while scrolling RACK (mpc-addin-sample-draw-handler 1.1). Keep a page's redraws to what changes.
+- **1.4 presents with DRM atomic commits** (FB_ID and FB_DAMAGE_CLIPS on the primary plane), not page flips: a draw handler
+  older than 1.1 paints nothing on 1.4.
+
+## 2026-11-24: Knob FX knobs in plugin.json (offline)
+
+- Akai's SDK (docs/knob-fx.md, MPC Sample 1.4+) maps a Knob FX's three knobs and the three SHIFT knobs with `knobs` /
+  `shiftKnobs` in `plugin.json`; without them the Sample puts params 0-5 there, labelled `Param 1`-`Param 6`. Releases had
+  neither. `gen_vst.py` now writes `build/knob-fx.json` from vst.json `"knob_fx"`, or from an effect's `"sample_page"` banks,
+  and `release.py` adds it to `plugin.json`; `sdk_release.py` keeps an SDK plugin's own. Not yet checked on a device.
+
+## 2026-11-25: an addin never loaded when another addin's drop-in sorted after ours (Force, MPC OS 3.10.1; device-tested by hand, installer fix offline)
+- Force 3.10.1.12 with a `hwremap.conf` drop-in that sets the whole `LD_PRELOAD` list: the Plugin Manager app installed, MPC restarted, and
+  `/proc/<MPC>/environ` had no `modeslot.so`. systemd applies drop-ins in name order, so `hwremap.conf` (h) is read after
+  `90-mpc-addins.conf` (9) and replaces our list. `/etc` there is the stacked layout of case 18 (a read-only overlay on a writable one), so
+  `unit_with_preload` found `hwremap.conf` but `writable` refused the read-only view, and the installer fell back to the shared drop-in.
+- Fix (`upper_of` in addin-lib.sh): when the file that wins is also in the writable layer, edit that copy (add on install, remove on
+  uninstall) and drop the cached view. Test case 18b. Not run under the device's BusyBox yet. By hand on the Force the same edit loaded the
+  app (`modeslot: installed: Force 3.10.1`) and it survived a reboot.
+- Lesson: editing the upper directory with `sed -i` (new inode) behind a mounted overlay left `/etc` showing the old file; `etc_refresh`
+  (drop_caches) or an in-place write fixes the view, and a reboot always does.
+
+## 2026-11-26: which MIDI reaches a VST2 instrument on the MPC Key 61 (device, Key 61, Gen1, MPC OS 3.10.1)
+
+A silent probe instrument (`midiprobe` in the mpc-vst-ondes port repo: logs every `midi()` call; vst.json `"cc": false,
+"nrpn": false` so the wrapper hands every CC on) on a track, with the keyboard's own controls. Everything arrived on channel 1:
+
+- **Pitch bend (0xE0): real 14-bit.** The pitch wheel swept 0 to 16383 with 94 distinct LSB values in 177 messages, about one
+  every 5.8 ms (about 170 per second), never more than 680 apart. It returns to 8192 (once 8191).
+- **Touch strip:** in a pitch-bend mode it sends the same 14-bit bend as an absolute position: it jumps straight to where the
+  finger lands and snaps back to the centre on release (steps of 8192 seen). In a modulation mode it sends CC 1. Several of its
+  other modes sent nothing to the plugin (not identified one by one).
+- **Mod wheel: CC 1**, 0-127. **Expression pedal: CC 11**, 0-127. **Sustain pedal: CC 64**, 0 / 127.
+- **Aftertouch: channel pressure (0xD0)** 0-127; no poly aftertouch (0xA0) seen.
+- Notes with velocity (1-105 seen in this test).
+
+So a plugin can use bend, mod wheel, expression, sustain and channel pressure as played controls on this keyboard. Not tried:
+other Gen1/Gen2 models, MIDI from an external controller, and what a sequenced track's recorded bend sends.
+
+## 2026-11-27: uninstalling one addin removed the boot-reload unit others needed (Force, 3.10.1, device)
+
+On a Force whose addins are listed in `hwremap.conf`, uninstalling the only addin in `90-mpc-addins.conf` removed
+`mpc-addins-reload.service`, and reinstalling did not write it again (no shared drop-in). Nothing then reloaded systemd after
+boot, so `/etc` overlay drop-ins (addins, connman's restart policy) were not seen. The unit is now kept while any drop-in in
+`/etc` preloads from the addins' folder, and its condition is a non-empty drop-in folder. Tests: case 18b.

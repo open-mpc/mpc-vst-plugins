@@ -1,0 +1,20 @@
+{
+  "id": "sample-kitload",
+  "name": "MPC Sample Kit Load",
+  "author": "jacob-sabella",
+  "repo": "jacob-sabella/mpc-addin-sample-kitload",
+  "kind": "addin",
+  "style": "utility",
+  "tags": [
+    "kits",
+    "pads",
+    "banks"
+  ],
+  "license": "MIT",
+  "summary": "B3 Load Kit opens a KITLOAD page: put the kit's banks onto the banks you choose and LOAD changes only those, keeping every other pad and the sample pool. ALL loads the whole kit as before. MPC Sample firmware 1.4.0 only. Needs the MPC Sample Draw Handler 1.1.1.",
+  "screenshot": "https://raw.githubusercontent.com/jacob-sabella/mpc-addin-sample-kitload/c873bd5f25fc54e4d95eeffa0ca239d2e6c78767/docs/screenshots/kitload-card.png",
+  "asset_pattern": "MPC-Sample-kit-load-addin-*-mpc-aarch64.zip",
+  "devices": ["mpc-sample"],
+  "depends": ["sample-draw-handler>=1.1.1"],
+  "tip": "https://github.com/sponsors/jacob-sabella"
+}

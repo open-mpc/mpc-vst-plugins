@@ -278,6 +278,22 @@ class Vst2Test(Base):
         self.assertEqual(e, [])
         self.assertTrue(json.loads(zipfile.ZipFile(z).read("Test-Synth-1.2.0/mpc-plugin.json"))["vst2"])
 
+    def test_knob_fx_goes_into_an_effects_plugin_json(self):
+        """gen_vst.py's build/knob-fx.json, next to the entry, becomes plugin.json's knobs (the MPC Sample's Knob FX, 1.4+)."""
+        kfx = {"knobs": [{"parameter": 2, "label": "Ref"}, {}, {"parameter": 0, "label": "Mix"}], "shiftKnobs": [{"parameter": 1, "label": "Mute"}],
+               "shortName": "Tst", "other": 1}
+        json.dump(kfx, open(os.path.join(self.tmp, "knob-fx.json"), "w"))
+        global ENTRY
+        old, ENTRY = ENTRY, ENTRY.replace('isInstrument="1"', 'isInstrument="0"').replace('numInputs="0"', 'numInputs="2"')
+        try:
+            pj = self.pj(self.build())
+        finally:
+            ENTRY = old
+        self.assertEqual(pj["kind"], "effect")
+        self.assertEqual((pj["knobs"], pj["shiftKnobs"], pj["shortName"]), (kfx["knobs"], kfx["shiftKnobs"], "Tst"))
+        self.assertNotIn("other", pj)
+        self.assertNotIn("knobs", self.pj(self.build()))   # an instrument has no Knob FX
+
     def test_aarch64_uses_file64(self):
         z = self.build(machine=183, glibc=b"GLIBC_2.34")
         pj = self.pj(z)
@@ -1889,7 +1905,9 @@ class ListingsTest(unittest.TestCase):
         self.write(self.L)
         r = build(b)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(open(os.path.join(a, "catalog.json"), "rb").read(), open(os.path.join(b, "catalog.json"), "rb").read())
+        # "generated" is the build time to the second: two builds can straddle a second boundary, so leave it out of the comparison
+        load = lambda d: {k: v for k, v in json.load(open(os.path.join(d, "catalog.json"))).items() if k != "generated"}
+        self.assertEqual(load(a), load(b))
         self.assertFalse(os.path.exists(os.path.join(a, "listings.json")))
         self.assertEqual(json.load(open(os.path.join(b, "listings.json")))["listings"][0]["id"], "pro-synth")
 

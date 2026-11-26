@@ -1,0 +1,17 @@
+{
+  "id": "poli-saturator",
+  "name": "Poli-Saturator",
+  "author": "Poli",
+  "repo": "Adison-Negron/Poli-Plugins",
+  "kind": "effect",
+  "style": "distortion",
+  "tags": [
+    "saturation",
+    "tape",
+    "tube"
+  ],
+  "license": "MIT",
+  "summary": "Saturator with Tube, Tape, Clip and Fold types, Smash compression, Crunch, Soften, three-band drive and 65 presets. Gen2 only.",
+  "asset_pattern": "Poli-Saturator-*-mpc-aarch64.zip",
+  "collection": "poli"
+}

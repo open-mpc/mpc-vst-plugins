@@ -1,0 +1,17 @@
+{
+  "id": "dust87",
+  "name": "DUST '87",
+  "author": "Lumina Aerospace LLC",
+  "repo": "Luminous-Works/mpc-vst-Dust-87",
+  "kind": "instrument",
+  "license": "GPL-3.0-only",
+  "summary": "18-voice procedural drum machine with an MPC-synced 64-step sequencer, 80 built-in grooves, and lo-fi sample-rate and bit-depth reduction.",
+  "style": "drum-machine",
+  "tags": [
+    "drum-machine",
+    "lo-fi",
+    "sequencer",
+    "drums"
+  ],
+  "screenshot": "https://raw.githubusercontent.com/Luminous-Works/mpc-vst-Dust-87/53ce40f4517beb63c29bee8619adc12c040466c0/docs/screenshots/pad-layout.png"
+}

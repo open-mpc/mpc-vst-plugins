@@ -1,0 +1,17 @@
+{
+  "id": "poli-shhhhh",
+  "name": "Shhhhh",
+  "author": "Poli",
+  "repo": "Adison-Negron/Poli-Plugins",
+  "kind": "effect",
+  "style": "mixing",
+  "tags": [
+    "denoise",
+    "noise-reduction",
+    "spectral"
+  ],
+  "license": "MIT",
+  "summary": "Learn-the-noise spectral de-noiser: Learn, Threshold, Reduction, 6 nodes, Pass and Diff. Gen2 only.",
+  "asset_pattern": "Shhhhh-*-mpc-aarch64.zip",
+  "collection": "poli"
+}

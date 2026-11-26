@@ -1,0 +1,19 @@
+{
+  "id": "peek",
+  "name": "PEEK",
+  "author": "swtdr34mz",
+  "repo": "swtdr34mz-afk/PEEK",
+  "kind": "instrument",
+  "license": "MPL-2.0",
+  "summary": "A Peak-style 8- or 16-voice hybrid poly: three oscillators with shape, VSync, saw density and 60 wavetables, linear FM, ring mod and noise, a 12/24 dB LP/BP/HP filter between two drives, three looping envelopes, four LFOs, a 16-slot mod matrix and 4-slot FX matrix, arp, distortion, chorus, delay and reverb. ECO and HIGH quality.",
+  "style": "polysynth",
+  "tags": [
+    "hybrid",
+    "polyphonic",
+    "wavetable",
+    "fm",
+    "arpeggiator"
+  ],
+  "asset_pattern": "PEEK-*-mpc-armv7.zip",
+  "screenshot": "https://raw.githubusercontent.com/swtdr34mz-afk/PEEK/v1.0.3/mpc/catalog/screenshot.png"
+}

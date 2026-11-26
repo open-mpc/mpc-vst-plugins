@@ -1,0 +1,17 @@
+{
+  "id": "poli-juicebox",
+  "name": "Poli-Juicebox",
+  "author": "Poli",
+  "repo": "Adison-Negron/Poli-Plugins",
+  "kind": "effect",
+  "style": "pitch-vocal",
+  "tags": [
+    "vocal",
+    "pitch",
+    "formant"
+  ],
+  "license": "MIT",
+  "summary": "Low-latency voice shaper: pitch and formant shifting, spectral tamer, harmonic shaper, formant filter, air and 50 presets. Gen2 only.",
+  "asset_pattern": "Poli-Juicebox-*-mpc-aarch64.zip",
+  "collection": "poli"
+}

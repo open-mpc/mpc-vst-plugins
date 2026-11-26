@@ -142,9 +142,18 @@ check_lib() {   # service: refuse a shared drop-in written by a newer installer,
     [ "$v" -le "$ADDIN_LIB_VERSION" ] || die "$(ours "$1") was written by a newer addin installer (format $v, this one is $ADDIN_LIB_VERSION): install a newer release of this addin"
 }
 
+# A file seen through a stacked read-only /etc, as it is in the writable layer (where it can be edited and persists), if it is there.
+# Needed when another addin's drop-in (hwremap.conf on a Force) sets LD_PRELOAD and sorts after ours: systemd reads it last, so it
+# replaces our list entirely and the only way to load an addin is to edit that file (Force 3.10.1, device 2026-11-25).
+upper_of() {   # file
+    [ -n "$ETC_UPPER" ] || { echo "$1"; return; }
+    rel=${1#"$SYSTEMD_ROOT"/etc/}
+    if [ "$rel" != "$1" ] && [ -f "$SYSTEMD_ROOT$ETC_UPPER/$rel" ]; then echo "$SYSTEMD_ROOT$ETC_UPPER/$rel"; else echo "$1"; fi
+}
 edits_in_place() { [ -n "$2" ] && [ "$2" != "$(ours "$1")" ] && writable "$2"; }   # service unit
 
 preload_add() {   # service unit so
+    [ -z "$2" ] || set -- "$1" "$(upper_of "$2")" "$3"
     if edits_in_place "$1" "$2"; then
         bak="$2.bak-mpc-addins"   # the first edit keeps a backup
         [ -f "$bak" ] || cp "$2" "$bak"
@@ -152,6 +161,7 @@ preload_add() {   # service unit so
         edit_preload "$2" add "$3"
         grep -qF "$3" "$2" || { mv "$2.prev" "$2"; echo "error: editing $2 failed; restored" >&2; exit 1; }
         rm -f "$2.prev"
+        etc_refresh
     else
         f=$(ours "$1")
         was_ro=0; [ "$DROPIN_ROOT" = /etc ] && [ -z "$ETC_UPPER" ] && root_ro && ! etc_overlay_rw && was_ro=1
@@ -168,8 +178,10 @@ preload_remove() {   # service so: out of every writable file that lists it, the
     o=$(ours "$1")
     for d in $UNIT_DIRS; do
         for f in "$SYSTEMD_ROOT$d/$1.service" "$SYSTEMD_ROOT$d/$1.service.d/"*.conf; do
-            [ -f "$f" ] && [ "$f" != "$o" ] && [ "$f" != "$(ours_logical "$1")" ] && grep -qF "$2" "$f" || continue
-            if writable "$f"; then edit_preload "$f" remove "$2"; else echo "warning: $f lists $2 but is read-only" >&2; fi
+            [ -f "$f" ] && [ "$f" != "$o" ] && [ "$f" != "$(ours_logical "$1")" ] || continue
+            wf=$(upper_of "$f")   # a stacked /etc shows its old copy until the cache is dropped: look in the writable layer
+            grep -qF "$2" "$wf" || continue
+            if writable "$wf"; then edit_preload "$wf" remove "$2"; etc_refresh; else echo "warning: $f lists $2 but is read-only" >&2; fi
         done
     done
     if [ -f "$o" ]; then
@@ -184,7 +196,8 @@ preload_remove() {   # service so: out of every writable file that lists it, the
 # After a reboot. Where /etc is an overlay that systemd mounts itself (etc.mount, a few seconds into boot, on MPC OS 3.x),
 # systemd has read its units before the drop-in above is visible: MPC's first start after a boot runs without the addins
 # until something reloads systemd (docs/ADDINS.md, "After a reboot"). A small unit on the root filesystem, pulled in by
-# MPC's service, reloads systemd once /etc is mounted and before MPC starts. It does nothing while there is no drop-in.
+# MPC's service, reloads systemd once /etc is mounted and before MPC starts. It does nothing while the service has no drop-in.
+# It is needed while any drop-in loads an addin: the shared one, or another file an addin was added to (hwremap.conf).
 # The root is mounted read-only, so writing it means a short remount; failing that, the installer warns and carries on.
 BOOT_UNIT=mpc-addins-reload.service
 BOOT_MARK="mpc-vst-plugins addin installer"
@@ -236,14 +249,23 @@ remount_root() {   # rw | ro (logged under test; ADDIN_REMOUNT_FAILS=1 simulates
 boot_unit_text() {   # service
     printf '[Unit]\nDescription=Reload systemd once /etc is mounted, so MPC starts with its addins (%s)\n' "$BOOT_MARK"
     printf '# /etc is an overlay mounted after systemd read its units: without a reload, the addins drop-in is not seen at boot.\n'
-    printf 'After=etc.mount\nBefore=%s.service\nConditionPathExists=/etc/systemd/system/%s.service.d/%s\n\n' "$1" "$1" "$DROPIN_NAME"
+    printf 'After=etc.mount\nBefore=%s.service\nConditionDirectoryNotEmpty=/etc/systemd/system/%s.service.d\n\n' "$1" "$1"
     printf '[Service]\nType=oneshot\nExecStart=-/bin/systemctl daemon-reload\nTimeoutStartSec=60\n'
 }
 boot_paths() {   # service: sets BU (the unit) and BW (its link in the service's .wants)
     BU="$SYSTEMD_ROOT/usr/lib/systemd/system/$BOOT_UNIT"; BW="$SYSTEMD_ROOT/usr/lib/systemd/system/$1.service.wants/$BOOT_UNIT"
 }
-boot_reload_add() {   # service: when the shared drop-in is in use on an /etc overlay
-    [ -f "$(ours "$1")" ] || return 0
+# Whether an addin still depends on a drop-in in /etc: the shared drop-in, or a drop-in there that preloads from the addins'
+# folder (the parent of this addin's own).
+etc_addins() {   # service
+    [ ! -f "$(ours "$1")" ] || return 0
+    for f in "$SYSTEMD_ROOT/etc/systemd/system/$1.service.d/"*.conf; do
+        [ -f "$f" ] && preload_of "$(upper_of "$f")" | tr ':' '\n' | grep -qF "${DIR%/*}/" && return 0
+    done
+    return 1
+}
+boot_reload_add() {   # service: while an addin is loaded from a drop-in on an /etc overlay
+    etc_addins "$1" || return 0
     etc_overlay_rw || [ -n "$ETC_UPPER" ] || return 0
     boot_paths "$1"
     if [ -f "$BU" ] && [ "$(cat "$BU")" = "$(boot_unit_text "$1")" ] && [ -L "$BW" ]; then return 0; fi
@@ -261,8 +283,8 @@ boot_reload_add() {   # service: when the shared drop-in is in use on an /etc ov
     sync
     [ $was_ro = 0 ] || remount_root ro || echo "warning: / is still writable; it is read-only again after a reboot" >&2
 }
-boot_reload_remove() {   # service: once the shared drop-in is gone (the last addin), take out the unit it wrote
-    [ ! -f "$(ours "$1")" ] || return 0
+boot_reload_remove() {   # service: once no drop-in loads an addin (the last one is gone), take out the unit it wrote
+    ! etc_addins "$1" || { boot_reload_add "$1"; return 0; }
     boot_paths "$1"
     [ -L "$BW" ] || { [ -f "$BU" ] && grep -qF "$BOOT_MARK" "$BU"; } || return 0
     was_ro=0; root_ro && was_ro=1

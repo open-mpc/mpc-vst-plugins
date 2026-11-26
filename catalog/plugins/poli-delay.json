@@ -1,0 +1,17 @@
+{
+  "id": "poli-delay",
+  "name": "Poli-delay",
+  "author": "Poli",
+  "repo": "Adison-Negron/Poli-Plugins",
+  "kind": "effect",
+  "style": "delay",
+  "tags": [
+    "delay",
+    "ping-pong",
+    "tempo-sync"
+  ],
+  "license": "MIT",
+  "summary": "Stereo delay with offset, ping-pong, tempo sync, filtered and saturated feedback, modulation and 75 presets. Gen2 only.",
+  "asset_pattern": "Poli-delay-*-mpc-aarch64.zip",
+  "collection": "poli"
+}

@@ -15,6 +15,7 @@ The zip unpacks to <Name>-<version>/ with:
 Standard library only. See docs/RELEASING.md.
 """
 import argparse
+import html
 import hashlib
 import json
 import os
@@ -92,7 +93,7 @@ ap.add_argument("-o", "--out", default="dist")
 a = ap.parse_args()
 
 entry = open(a.entry).read().strip()
-attr = dict(re.findall(r'(\w+)="([^"]*)"', entry))
+attr = {k: html.unescape(v) for k, v in re.findall(r'(\w+)="([^"]*)"', entry)}
 name, so_name = attr["name"], os.path.basename(attr["file"])
 so_path = a.so_path or so_name
 if not re.fullmatch(r"[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*", so_path) or ".." in so_path.split("/") or os.path.basename(so_path) != so_name:
@@ -149,7 +150,7 @@ for spec in a.extra:
             with open(p, "wb") as f:
                 f.write(fixed)
     extras.append(dest)
-meta = re.sub(r'(\s)file="[^"]*"', lambda m: '%sfile="%%payload-path%%/%s/%s"' % (m.group(1), skin_name, so_path), entry, count=1)
+meta = re.sub(r'(\s)file="[^"]*"', lambda m: '%sfile="%%payload-path%%/%s/%s"' % (m.group(1), html.escape(skin_name), so_path), entry, count=1)
 open(os.path.join(pdir, "plugin-meta.xml"), "w", newline="\n").write(meta + "\n")
 # plugin_list.awk runs on the device, so it has to ship with LF line endings: with CRLF the device awk stops at
 # the first line of code ("Unexpected token"), and a Windows checkout (core.autocrlf) has CRLF in tools/release/.
@@ -362,6 +363,10 @@ if manifest["arch"] in ("armv7", "aarch64"):
     for k, v in (("description", a.about), ("license", a.license), ("url", "https://github.com/" + a.repo if a.repo else "")):
         if v:
             pj[k] = v
+    # the MPC Sample's Knob FX knobs (1.4+, Akai's SDK docs/knob-fx.md), from gen_vst.py's knob_fx() next to the entry
+    kfx = os.path.join(os.path.dirname(os.path.abspath(a.entry)), "knob-fx.json")
+    if kind == "effect" and os.path.exists(kfx):
+        pj.update({k: v for k, v in json.load(open(kfx)).items() if k in ("knobs", "shiftKnobs", "shortName")})
     open(os.path.join(pdir, "plugin.json"), "w", newline="\n").write(json.dumps(pj, indent=2) + "\n")
     manifest["vst2"] = True
 open(os.path.join(root, "mpc-plugin.json"), "w", newline="\n").write(json.dumps(manifest, indent=2) + "\n")

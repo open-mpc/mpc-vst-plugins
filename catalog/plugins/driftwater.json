@@ -1,0 +1,19 @@
+{
+  "id": "driftwater",
+  "name": "Driftwater",
+  "author": "Elsewave",
+  "repo": "shhQuiet/DriftwaterMPC",
+  "kind": "effect",
+  "license": "LicenseRef-Elsewave-Driftwater-NonCommercial",
+  "source_available": true,
+  "min_os": "3.10.1",
+  "style": "modulation",
+  "tags": [
+    "stereo",
+    "modulation",
+    "delay",
+    "chorus"
+  ],
+  "summary": "Give guitar, keys or drums a gently drifting stereo wobble. Rate, Damp and Depth shape the motion, LPG lets transients brighten the wet signal, and Mix blends the effect with the dry input. An homage to the Fairfield Circuitry Shallow Water.",
+  "tip": "https://ko-fi.com/elsewavedsp"
+}

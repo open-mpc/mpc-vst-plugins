@@ -1,0 +1,19 @@
+{
+  "id": "jamclock",
+  "name": "JamClock",
+  "author": "miathedev",
+  "repo": "miathedev/mpc-vst-jamclock",
+  "kind": "effect",
+  "license": "GPL-3.0-or-later",
+  "summary": "Listen-only insert that beat-tracks live audio (BTT) and drives the MPC in external sync: MIDI Clock (24 ppq) + Start/Continue/Stop on its own ALSA port 'JamClock MIDI Out'.",
+  "style": "utility",
+  "tags": [
+    "midi",
+    "clock",
+    "sync",
+    "tempo",
+    "live"
+  ],
+  "source_available": true,
+  "screenshot": "https://raw.githubusercontent.com/miathedev/mpc-vst-jamclock/b2931eb4a613647799661b33320903728fa66cb2/screenshot.png"
+}

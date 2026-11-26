@@ -1,0 +1,17 @@
+{
+  "id": "poli-verb",
+  "name": "Poli-verb",
+  "author": "Poli",
+  "repo": "Adison-Negron/Poli-Plugins",
+  "kind": "effect",
+  "style": "reverb",
+  "tags": [
+    "reverb",
+    "space",
+    "tempo-sync"
+  ],
+  "license": "MIT",
+  "summary": "Stereo reverb with 14 spaces, tempo-synced pre-delay, reflection probability and 101 presets. Gen2 only.",
+  "asset_pattern": "Poli-verb-*-mpc-aarch64.zip",
+  "collection": "poli"
+}

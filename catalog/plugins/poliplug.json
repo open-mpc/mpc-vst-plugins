@@ -1,0 +1,17 @@
+{
+  "id": "poliplug",
+  "name": "PoliPlug",
+  "author": "Poli",
+  "repo": "Adison-Negron/Poli-Plugins",
+  "kind": "effect",
+  "style": "multi-fx",
+  "tags": [
+    "rack",
+    "chain",
+    "parallel"
+  ],
+  "license": "MIT",
+  "summary": "Effect rack on one insert: up to 16 of your installed effects in series plus a parallel section, each with its own page and presets. Reads MPC.settings and the VST2 Plugins folders to find them, rewrites its own skin, and writes a scan report to MPC Documents. Gen2 only.",
+  "asset_pattern": "PoliPlug-*-mpc-aarch64.zip",
+  "collection": "poli"
+}

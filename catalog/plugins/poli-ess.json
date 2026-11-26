@@ -1,0 +1,17 @@
+{
+  "id": "poli-ess",
+  "name": "Poli-Ess",
+  "author": "Poli",
+  "repo": "Adison-Negron/Poli-Plugins",
+  "kind": "effect",
+  "style": "dynamics",
+  "tags": [
+    "de-esser",
+    "vocal",
+    "sibilance"
+  ],
+  "license": "MIT",
+  "summary": "De-esser: dynamic sibilance suppressor for vocals, with presets. Gen2 only.",
+  "asset_pattern": "Poli-Ess-*-mpc-aarch64.zip",
+  "collection": "poli"
+}
