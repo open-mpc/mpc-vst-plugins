@@ -30,6 +30,24 @@ sample_card_synths() {
     done
     return 0
 }
+# drive_list: the drives a "VST2 Plugins" folder may be on, one per line: the internal ones, then every mounted /media/<drive>
+# (an external SSD, a USB stick or card; Akai's own az01-/acvs- mounts excluded), so a Key 61 whose VST2 Plugins folder is on
+# its external SSD is found (device, 2026-11-26: before, the installer fell back to /sdcard/Synths there). Tests name the
+# internal drives with MPC_TEST_DRIVES and the media root with MPC_TEST_MEDIA (with MPC_MOUNTS).
+drive_list() {
+    if [ -n "$MPC_TEST_DRIVES" ]; then printf '%s\n' $MPC_TEST_DRIVES; else printf '%s\n' /nvme /storage /media/az01-internal /sdcard; fi
+    MEDIA="${MPC_TEST_MEDIA:-/media}" awk '{ m = $2; gsub(/\\040/, " ", m); p = ENVIRON["MEDIA"] "/"
+        if (index(m, p) == 1) { r = substr(m, length(p) + 1); if (r != "" && r !~ /\// && r !~ /^(az01-|acvs-)/) print m } }' \
+        "${MPC_MOUNTS:-/proc/mounts}" 2>/dev/null || true
+    return 0
+}
+# first_vst2 [SKIN]: the first drive's "VST2 Plugins" folder (the one holding SKIN, when given); nothing when there is none.
+first_vst2() {
+    drive_list | while IFS= read -r d; do
+        if [ -d "$d/VST2 Plugins${1:+/$1}" ]; then echo "$d/VST2 Plugins"; break; fi   # if, not &&: set -e
+    done
+    return 0
+}
 if [ $TSET = 0 ]; then
     # the .so its plugin-list entry names (an entry may span lines), when that is this plugin's folder and it is there
     E=$(awk -v u="$UID_HEX" '{ b = b " " $0 } END { n = split(b, a, "<PLUGIN "); for (i = 2; i <= n; i++) if (index(a[i], " uid=\"" u "\"") && match(a[i], /file="[^"]*"/)) { print substr(a[i], RSTART + 6, RLENGTH - 7); exit } }' "$SETTINGS" 2>/dev/null || true)
@@ -37,11 +55,9 @@ if [ $TSET = 0 ]; then
     if [ -n "$E" ] && [ "${D##*/}" = "$SKIN" ] && [ -d "$D" ]; then SYNTHS="${D%/*}"
     elif [ $SAMPLE = 1 ]; then
         C=$(sample_card_synths); [ -z "$C" ] || SYNTHS="$C"
-    elif [ -z "$MPC_INSTALL_TEST" ] || [ -n "$MPC_TEST_DRIVES" ]; then   # MPC_TEST_DRIVES lets tests name the drives
-        for d in ${MPC_TEST_DRIVES:-/nvme /storage /media/az01-internal /sdcard}; do
-            [ -d "$d/VST2 Plugins/$SKIN" ] && { SYNTHS="$d/VST2 Plugins"; break; }
-        done
-        if [ -z "$MPC_TEST_DRIVES" ]; then
+    elif [ -z "$MPC_INSTALL_TEST" ] || [ -n "$MPC_TEST_DRIVES$MPC_TEST_MEDIA" ]; then   # tests name the drives
+        V=$(first_vst2 "$SKIN"); [ -z "$V" ] || SYNTHS="$V"
+        if [ -z "$MPC_TEST_DRIVES$MPC_TEST_MEDIA" ]; then
             [ "$SYNTHS" = /sdcard/Synths ] && [ ! -d /sdcard/Synths ] && [ -d /nvme ] && SYNTHS=/nvme/Synths
             [ "$SYNTHS" = /sdcard/Synths ] && [ ! -d /sdcard/Synths ] && [ -d /storage/Synths ] && SYNTHS=/storage/Synths
         fi

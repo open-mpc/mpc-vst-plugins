@@ -258,8 +258,9 @@ The scripted install below uses that folder too, and finds it once it exists.
 2. Run it: `ssh root@<device-ip> sh /tmp/{top}/install.sh{install_args}`{install_args_note}
 
 The installer checks the device, **stops MPC** (save your project first), copies `portable/{skin}/` (the plugin, its skin
-and its data, as one folder) into the folder this MPC OS loads plugins from (on MPC OS 3.10.1 and later `<drive>/VST2 Plugins`,
-when that folder exists or already holds this plugin; before 3.10.1 `{synths}`; it prints the one it uses), backs up
+and its data, as one folder) into the folder this MPC OS loads plugins from (on MPC OS 3.10.1 and later `<drive>/VST2 Plugins`
+on an internal or external drive, when that folder exists or already holds this plugin; before 3.10.1 `{synths}`; it prints
+the one it uses), backs up
 `MPC.settings`, adds the plugin to MPC's plugin list from the folder's `plugin-meta.xml` and starts MPC again. Running it again upgrades in place, keeping your own files.
 An older install of this plugin (the previous layout, with the `.so` in `/sdcard/vst`) is replaced, not duplicated.
 `-y` skips the confirmation prompt; `-t <folder>` installs into another Synths folder (for example on a card).

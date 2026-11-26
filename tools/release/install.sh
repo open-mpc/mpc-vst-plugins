@@ -11,6 +11,16 @@ cd "$(dirname "$0")"
 NAME='@NAME@'; SO='@SO_NAME@'; SKIN='@SKIN@'; UID_HEX='@UID@'; LEGACY_SO='@LEGACY_SO@'; USER_DATA='@USER_DATA@'; EXTRAS='@EXTRAS@'; RETIRE='@RETIRE@'; PLUGIN_ID='@ID@'
 SYNTHS=/sdcard/Synths; YES=0; DEFER=0; TSET=0
 die() { echo "error: $*" >&2; exit 1; }
+# copy_a: cp -a without the "can't preserve ownership" lines an exFAT/FAT drive causes for every file (it has no owners;
+# device, MPC Key 61 external SSD, 2026-11-26). Any other error is still shown and still fails the copy.
+copy_a() {
+    _e=$(mktemp 2>/dev/null || echo "/tmp/.copy_a.$$")
+    if cp -a "$@" 2>"$_e"; then _rc=0; else _rc=$?; fi
+    _rest=$(grep -v -e "preserve ownership" "$_e" || true)
+    rm -f "$_e"
+    [ -z "$_rest" ] || printf '%s\n' "$_rest" >&2
+    [ "$_rc" = 0 ] || [ -z "$_rest" ]
+}
 while [ $# -gt 0 ]; do
     case "$1" in
         -y) YES=1; shift ;;
@@ -33,31 +43,47 @@ sample_card_synths() {
     done
     return 0
 }
+# drive_list: the drives a "VST2 Plugins" folder may be on, one per line: the internal ones, then every mounted /media/<drive>
+# (an external SSD, a USB stick or card; Akai's own az01-/acvs- mounts excluded), so a Key 61 whose VST2 Plugins folder is on
+# its external SSD is found (device, 2026-11-26: before, the installer fell back to /sdcard/Synths there). Tests name the
+# internal drives with MPC_TEST_DRIVES and the media root with MPC_TEST_MEDIA (with MPC_MOUNTS).
+drive_list() {
+    if [ -n "$MPC_TEST_DRIVES" ]; then printf '%s\n' $MPC_TEST_DRIVES; else printf '%s\n' /nvme /storage /media/az01-internal /sdcard; fi
+    MEDIA="${MPC_TEST_MEDIA:-/media}" awk '{ m = $2; gsub(/\\040/, " ", m); p = ENVIRON["MEDIA"] "/"
+        if (index(m, p) == 1) { r = substr(m, length(p) + 1); if (r != "" && r !~ /\// && r !~ /^(az01-|acvs-)/) print m } }' \
+        "${MPC_MOUNTS:-/proc/mounts}" 2>/dev/null || true
+    return 0
+}
+# first_vst2 [SKIN]: the first drive's "VST2 Plugins" folder (the one holding SKIN, when given); nothing when there is none.
+first_vst2() {
+    drive_list | while IFS= read -r d; do
+        if [ -d "$d/VST2 Plugins${1:+/$1}" ]; then echo "$d/VST2 Plugins"; break; fi   # if, not &&: set -e
+    done
+    return 0
+}
 # No -t: pick the folder this firmware loads from, without assuming a drive name (Live III: /nvme, Force/others: /sdcard, /media/az01-internal, /storage).
 #  0. the MPC Sample: its SD card's Synths folder (an error when no card is in);
 #  1. a copy of this plugin already in <drive>/VST2 Plugins: update it (an install elsewhere would leave the old copy loading);
-#  2. MPC OS 3.10.1+ (read from /usr/bin/MPC): <drive>/VST2 Plugins on the first candidate drive that already has a VST2 Plugins folder;
+#  2. MPC OS 3.10.1+ (read from /usr/bin/MPC): <drive>/VST2 Plugins on the first drive that already has a VST2 Plugins folder
+#     (internal drives first, then mounted external ones: drive_list);
 #  3. otherwise the classic /sdcard/Synths (Gen1 and MPC OS before 3.10.1), or on a Gen2 unit, which has no /sdcard drive, its
 #     internal drive's Synths folder (/nvme/Synths on a Live III, /storage/Synths on a unit with loopback storage), as mpc-store.sh does.
 if [ $TSET = 0 ] && [ $SAMPLE = 1 ]; then
     SYNTHS=$(sample_card_synths)
     [ -n "$SYNTHS" ] || die "no SD card found: the MPC Sample keeps plugins on its card (/media/<card>/Synths). Insert it and run this again, or pass -t <folder>"
     echo "using $SYNTHS (the MPC Sample's SD card); pass -t to choose another"
-elif [ $TSET = 0 ] && [ -z "$MPC_INSTALL_TEST" ]; then
-    CANDS="/nvme /storage /media/az01-internal /sdcard"
-    for d in $CANDS; do
-        [ -d "$d/VST2 Plugins/$SKIN" ] && { SYNTHS="$d/VST2 Plugins"; break; }
-    done
+elif [ $TSET = 0 ] && { [ -z "$MPC_INSTALL_TEST" ] || [ -n "$MPC_TEST_DRIVES$MPC_TEST_MEDIA" ]; }; then   # tests name the drives
+    V=$(first_vst2 "$SKIN"); [ -z "$V" ] || SYNTHS="$V"
     if [ "$SYNTHS" = /sdcard/Synths ]; then
-        OSV=$(grep -ao '3\.1[0-9]\.[0-9][0-9]*\(\.[0-9][0-9]*\)*' /usr/bin/MPC 2>/dev/null | sort -uV | tail -n 1)
+        OSV=${MPC_TEST_OSV:-$(grep -ao '3\.1[0-9]\.[0-9][0-9]*\(\.[0-9][0-9]*\)*' /usr/bin/MPC 2>/dev/null | sort -uV | tail -n 1)}
         case "$OSV" in 3.1[1-9]*|3.10.[1-9]*)
-            for d in $CANDS; do
-                [ -d "$d/VST2 Plugins" ] && { SYNTHS="$d/VST2 Plugins"; break; }
-            done ;;
+            V=$(first_vst2); [ -z "$V" ] || SYNTHS="$V" ;;
         esac
     fi
-    [ "$SYNTHS" = /sdcard/Synths ] && [ ! -d /sdcard/Synths ] && [ -d /nvme ] && SYNTHS=/nvme/Synths
-    [ "$SYNTHS" = /sdcard/Synths ] && [ ! -d /sdcard/Synths ] && [ -d /storage/Synths ] && SYNTHS=/storage/Synths
+    if [ -z "$MPC_INSTALL_TEST" ]; then
+        [ "$SYNTHS" = /sdcard/Synths ] && [ ! -d /sdcard/Synths ] && [ -d /nvme ] && SYNTHS=/nvme/Synths
+        [ "$SYNTHS" = /sdcard/Synths ] && [ ! -d /sdcard/Synths ] && [ -d /storage/Synths ] && SYNTHS=/storage/Synths
+    fi
     [ "$SYNTHS" = /sdcard/Synths ] || echo "using $SYNTHS (the plugin folder of this MPC OS); pass -t to choose another"
 fi
 case "$SYNTHS" in /*) ;; *) die "-t must be an absolute path" ;; esac
@@ -93,8 +119,11 @@ mkdir -p "$SYNTHS" || die "cannot create $SYNTHS"
 # remounted exec over a noexec drive (the MPC Sample's SD card, docs/NOTES.md) counts as exec. BusyBox df names the drive.
 OPTS=$(cd "$SYNTHS" 2>/dev/null && D=$(pwd -P) awk '{ m = $2; gsub(/\\040/, " ", m)
     if ((ENVIRON["D"] == m || index(ENVIRON["D"], m (m == "/" ? "" : "/")) == 1) && length(m) >= best) { best = length(m); o = $4 } }
-    END { print o }' /proc/mounts 2>/dev/null)
-if printf '%s\n' "$OPTS" | grep -q '\(^\|,\)noexec\(,\|$\)'; then
+    END { print o }' "${MPC_MOUNTS:-/proc/mounts}" 2>/dev/null)
+# Not for <drive>/VST2 Plugins: MPC OS 3.10.1+ remounts the drive exec for it (firmware strings; device, MPC Key 61,
+# 2026-11-26: its external SSD showed noexec earlier in a session and exec after a restart, and plugins load from it).
+case "${SYNTHS%/}" in */"VST2 Plugins") VST2_TARGET=1 ;; *) VST2_TARGET=0 ;; esac
+if [ $VST2_TARGET = 0 ] && printf '%s\n' "$OPTS" | grep -q '\(^\|,\)noexec\(,\|$\)'; then
     if [ $SAMPLE = 1 ]; then
         echo "warning: $SYNTHS is on a noexec mount (the MPC Sample mounts its card noexec), so MPC will not be able to load this plugin from it. Bind the folder onto itself and remount it exec: mount --bind \"$SYNTHS\" \"$SYNTHS\" && mount -o remount,bind,exec \"$SYNTHS\" (needed again after every restart of the Sample)."
     else
@@ -144,7 +173,7 @@ fi
 # 1. the folder: staged next to the target, the user's own files carried over, then swapped in
 NEW="$SYNTHS/$SKIN"; STAGE="$SYNTHS/.$SKIN.new"; OLD="$SYNTHS/.$SKIN.old"
 rm -rf "$STAGE" "$OLD"
-cp -a "portable/$SKIN" "$STAGE"
+copy_a "portable/$SKIN" "$STAGE"
 SYNTHS_SED=$(printf '%s' "$SYNTHS" | sed 's/[|&\\]/\\&/g')   # the folder as a sed replacement (| & \ escaped)
 for f in "$STAGE"/Presets/*.xpl; do   # shipped presets name the plugin with the same placeholder as plugin-meta.xml
     [ -f "$f" ] || continue
@@ -162,9 +191,9 @@ if [ -f MODES ]; then   # a zip unpacked on Windows or copied file by file loses
 fi
 for d in $USER_DATA; do
     if [ -e "$NEW/$d" ]; then          # an earlier install of this layout: its files win over the shipped ones
-        rm -rf "$STAGE/$d"; mkdir -p "$(dirname "$STAGE/$d")"; cp -a "$NEW/$d" "$STAGE/$d"
+        rm -rf "$STAGE/$d"; mkdir -p "$(dirname "$STAGE/$d")"; copy_a "$NEW/$d" "$STAGE/$d"
     elif [ $LEGACY = 1 ] && [ -d "$OLDROOT/$d" ]; then   # the old layout: merged over what the package ships
-        mkdir -p "$STAGE/$d"; cp -a "$OLDROOT/$d/." "$STAGE/$d/"; MIGRATED="$MIGRATED $d"
+        mkdir -p "$STAGE/$d"; copy_a "$OLDROOT/$d/." "$STAGE/$d/"; MIGRATED="$MIGRATED $d"
     fi
 done
 if [ -e "$NEW" ]; then mv "$NEW" "$OLD"; fi
@@ -232,7 +261,7 @@ if [ -n "$RETIRE" ]; then
         if grep -q "\"id\": *\"$PLUGIN_ID\"" "$o/mpc-plugin.json" 2>/dev/null; then
             for d in $USER_DATA; do
                 if [ -e "$o/$d" ] && [ ! -e "$NEW/$d" ]; then
-                    mkdir -p "$(dirname "$NEW/$d")" && cp -a "$o/$d" "$NEW/$d" || die "could not move your files from $r/$d; the old folder was kept"
+                    mkdir -p "$(dirname "$NEW/$d")" && copy_a "$o/$d" "$NEW/$d" || die "could not move your files from $r/$d; the old folder was kept"
                     echo "moved your files from $r/$d into $SYNTHS/$SKIN"
                 fi
             done

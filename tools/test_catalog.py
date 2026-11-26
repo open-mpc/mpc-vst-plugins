@@ -2873,6 +2873,117 @@ class InstallerTest(Base):
         self.assertEqual(open(rom).read(), "user data")
         self.assertEqual(sorted(os.listdir(os.path.join(vst2, self.SKIN))), ["banks", "roms"])   # only the user data folders stay
 
+    def external_drive(self, name="SSD", opts="rw,nosuid,nodev,noexec,relatime", vst2_internal=False, skin_on_external=False):
+        """A device whose internal drives (MPC_TEST_DRIVES) and mounted /media drives (MPC_TEST_MEDIA, MPC_MOUNTS) are folders
+        under tmp. Returns (env for the scripts, the external drive's VST2 Plugins folder, the internal one)."""
+        dev = os.path.join(self.tmp, "device")
+        internal = [os.path.join(dev, "nvme"), os.path.join(dev, "sdcard")]   # nvme does not exist, as on a Gen1
+        os.makedirs(internal[1], exist_ok=True)
+        media = os.path.join(self.tmp, "media")
+        ext = os.path.join(media, name)
+        akai = os.path.join(media, "az01-internal-sd")                         # Akai's own mount: never a candidate
+        for d in (os.path.join(ext, "VST2 Plugins"), os.path.join(akai, "VST2 Plugins")):
+            os.makedirs(d, exist_ok=True)
+        if vst2_internal:
+            os.makedirs(os.path.join(internal[1], "VST2 Plugins"), exist_ok=True)
+        if skin_on_external:
+            os.makedirs(os.path.join(ext, "VST2 Plugins", self.SKIN), exist_ok=True)
+        mounts = os.path.join(self.tmp, "mounts")
+        with open(mounts, "w") as f:
+            f.write("/dev/root / ext4 rw 0 0\n")
+            f.write("/dev/mmcblk0p7 %s ext4 rw 0 0\n" % akai.replace(" ", "\\040"))
+            f.write("/dev/sda2 %s exfat %s 0 0\n" % (ext.replace(" ", "\\040"), opts))
+        env = dict(MPC_TEST_DRIVES=" ".join(internal), MPC_TEST_MEDIA=media, MPC_MOUNTS=mounts, MPC_TEST_OSV="3.10.1.12")
+        return env, os.path.join(ext, "VST2 Plugins"), os.path.join(internal[1], "VST2 Plugins")
+
+    def run_without_t(self, script, env_extra, path=None):
+        env = dict(os.environ, MPC_INSTALL_TEST="1", MPC_SETTINGS=self.settings_path, MPC_LEGACY_ROOT=self.legacy_root,
+                   MPC_TEST_LOG=os.path.join(self.tmp, "mpc_ctl.log"), **env_extra)
+        if path or os.environ.get("INSTALLER_TEST_PATH"):
+            env["PATH"] = path or os.environ["INSTALLER_TEST_PATH"]
+        return subprocess.run(["sh", os.path.join(self.top, script), "-y"], cwd=self.top, env=env, capture_output=True, text=True)
+
+    def test_install_finds_vst2_plugins_on_an_external_drive(self):
+        """MPC OS 3.10.1, VST2 Plugins only on an external SSD (an MPC Key 61, 2026-11-26): before, the installer looked only on the
+        internal drives and fell back to /sdcard/Synths, a registration 3.10.1's browser does not list."""
+        env, ext_vst2, _ = self.external_drive()
+        r = self.run_without_t("install.sh", env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("using " + ext_vst2, r.stdout)
+        self.assertTrue(os.path.isfile(os.path.join(ext_vst2, self.SKIN, "test_synth.so")))
+        self.assertFalse(os.path.exists(os.path.join(self.tmp, "media", "az01-internal-sd", "VST2 Plugins", self.SKIN)))
+        self.assertNotIn("noexec", r.stdout + r.stderr)   # MPC OS 3.10.1 remounts the drive exec for VST2 Plugins
+
+    def test_install_handles_an_external_drive_name_with_spaces(self):
+        env, ext_vst2, _ = self.external_drive(name="SSD - Force")   # /proc/mounts writes the spaces as \040
+        r = self.run_without_t("install.sh", env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(os.path.isfile(os.path.join(ext_vst2, self.SKIN, "test_synth.so")), r.stdout)
+
+    def test_internal_vst2_plugins_comes_before_an_external_one(self):
+        env, ext_vst2, int_vst2 = self.external_drive(vst2_internal=True)
+        r = self.run_without_t("install.sh", env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("using " + int_vst2, r.stdout)
+        self.assertFalse(os.path.exists(os.path.join(ext_vst2, self.SKIN)))
+
+    def test_an_installed_copy_on_an_external_drive_is_updated_there(self):
+        env, ext_vst2, int_vst2 = self.external_drive(vst2_internal=True, skin_on_external=True)
+        r = self.run_without_t("install.sh", env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("using " + ext_vst2, r.stdout)                          # not a second copy on the internal drive
+        self.assertFalse(os.path.exists(os.path.join(int_vst2, self.SKIN)))
+
+    def test_noexec_warning_still_shown_for_a_synths_folder(self):
+        mounts = os.path.join(self.tmp, "mounts")
+        os.makedirs(self.synths, exist_ok=True)
+        with open(mounts, "w") as f:
+            f.write("/dev/sda1 %s exfat rw,noexec 0 0\n" % os.path.dirname(self.synths))
+        env = dict(os.environ, MPC_INSTALL_TEST="1", MPC_SETTINGS=self.settings_path, MPC_LEGACY_ROOT=self.legacy_root,
+                   MPC_TEST_LOG=os.path.join(self.tmp, "mpc_ctl.log"), MPC_MOUNTS=mounts)
+        r = subprocess.run(["sh", os.path.join(self.top, "install.sh"), "-y", "-t", self.synths], cwd=self.top, env=env,
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("noexec mount", r.stdout)
+        vst2 = os.path.join(os.path.dirname(self.synths), "VST2 Plugins")    # the same drive, the VST2 Plugins folder: no warning
+        r = subprocess.run(["sh", os.path.join(self.top, "install.sh"), "-y", "-t", vst2], cwd=self.top, env=env,
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn("noexec", r.stdout)
+
+    def fake_cp(self, line, rc):
+        """A cp that copies, then (for cp -a) complains with `line` and exits `rc` (an exFAT drive's ownership noise, or a real error)."""
+        d = os.path.join(self.tmp, "fakebin")
+        os.makedirs(d, exist_ok=True)
+        real = shutil.which("cp")
+        with open(os.path.join(d, "cp"), "w") as f:
+            # only cp -a preserves ownership: a plain cp (the MPC.settings backup) copies quietly, as on the device
+            f.write("#!/bin/sh\n%s \"$@\" || exit $?\n[ \"$1\" = -a ] || exit 0\necho \"%s\" >&2\nexit %d\n" % (real, line, rc))
+        os.chmod(os.path.join(d, "cp"), 0o755)
+        return d + os.pathsep + (os.environ.get("INSTALLER_TEST_PATH") or os.environ["PATH"])
+
+    def test_copy_hides_exfat_ownership_noise_but_not_real_errors(self):
+        env, ext_vst2, _ = self.external_drive()
+        for rc in (0, 1):   # BusyBox carries on (0); GNU cp exits 1 for the same complaint
+            path = self.fake_cp("cp: can't preserve ownership of 'x': Operation not permitted", rc)
+            r = self.run_without_t("install.sh", env, path=path)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertNotIn("preserve ownership", r.stderr)
+            self.assertTrue(os.path.isfile(os.path.join(ext_vst2, self.SKIN, "test_synth.so")))
+        path = self.fake_cp("cp: write error: No space left on device", 1)
+        r = self.run_without_t("install.sh", env, path=path)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("No space left on device", r.stderr)
+
+    def test_uninstall_finds_a_copy_on_an_external_drive(self):
+        env, ext_vst2, _ = self.external_drive()
+        self.assertEqual(self.run_without_t("install.sh", env).returncode, 0)
+        open(self.settings_path, "w").write(SETTINGS_XML)   # no plugin-list entry left to point at the folder
+        r = self.run_without_t("uninstall.sh", env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("using " + ext_vst2, r.stdout)
+        self.assertFalse(os.path.exists(os.path.join(ext_vst2, self.SKIN, "test_synth.so")))
+
     def test_uninstall_says_so_when_it_finds_no_folder(self):
         vst2 = os.path.join(self.tmp, "device", "storage", "VST2 Plugins")
         self.assertEqual(self.run_script("install.sh", "-t", vst2).returncode, 0)

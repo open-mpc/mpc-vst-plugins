@@ -3164,3 +3164,23 @@ A silent probe instrument (`midiprobe` in the mpc-vst-ondes port repo: logs ever
 
 So a plugin can use bend, mod wheel, expression, sustain and channel pressure as played controls on this keyboard. Not tried:
 other Gen1/Gen2 models, MIDI from an external controller, and what a sequenced track's recorded bend sends.
+
+## 2026-11-26: the release installer missed `VST2 Plugins` on an external drive; exFAT ownership noise; noexec (device, Key 61, MPC OS 3.10.1.12; fix offline)
+
+Installing Ondes 0.5.0 from its release zip on an MPC Key 61 whose only `VST2 Plugins` folder is on an external SSD (`/media/SSD`, exFAT):
+- **Wrong folder (device):** `install.sh` looked for `VST2 Plugins` only on `/nvme /storage /media/az01-internal /sdcard`, found none, and
+  installed into `/sdcard/Synths` with an `MPC.settings` entry (creating `/sdcard/Synths`, which this Key 61 did not have). On 3.10.1 such
+  a registration is not offered in the plugin browser (2026-10-31 above). `-t "/media/SSD/VST2 Plugins"` installed it correctly.
+- **Noise (device):** every file copied onto the exFAT drive printed `cp: can't preserve ownership of ...: Operation not permitted`
+  (BusyBox `cp -a`; it exits 0, so the install went on).
+- **noexec (device):** `/proc/mounts` showed `/media/SSD` `noexec` earlier in an MPC session and without it after a restart of the device,
+  while plugins in its `VST2 Plugins` loaded both times. That matches the firmware-strings note (2026-10-31: MPC remounts a noexec drive
+  exec for `VST2 Plugins`), but the remount itself was not watched happening.
+- **Fix (offline: `tools/test_catalog.py` InstallerTest, 7 new tests, also with BusyBox as the userland; all 7 fail on the old
+  templates):** `install.sh` and `uninstall.sh` look on the internal drives first, then on every mounted `/media/<drive>` (not Akai's
+  `az01-*`/`acvs-*` mounts; names with spaces work); `copy_a` drops only the ownership lines of `cp -a` (other errors still show and
+  fail, also when GNU `cp` exits 1 for the ownership complaint); a `VST2 Plugins` target gets no noexec warning (a Synths folder still
+  does). Test hooks: `MPC_TEST_DRIVES`, `MPC_TEST_MEDIA`, `MPC_MOUNTS`, `MPC_TEST_OSV`. Not yet run on a device; reaches a plugin when
+  its zip is rebuilt with this `main`.
+- Also seen: `uninstall.sh` removed that `/sdcard/Synths` install cleanly but left the empty `/sdcard/Synths` it had created.
+

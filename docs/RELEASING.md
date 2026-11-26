@@ -120,10 +120,13 @@ Run on the device as root (`sh install.sh [-y] [-n] [-t <synths-dir>]`):
    start MPC again even if one install fails.
 3. Copies `portable/<skin>/` next to its target (`-t <folder>`; without it, the folder this MPC OS loads from: on the MPC
    Sample its SD card's `Synths` folder (an error when no card is in), otherwise an existing copy in `<drive>/VST2 Plugins`,
-   then on MPC OS 3.10.1+ `<drive>/VST2 Plugins` on the first drive that has that folder, otherwise `/sdcard/Synths`, or the
-   internal drive's Synths folder on Gen2; it prints the one it picks. The generated
+   then on MPC OS 3.10.1+ `<drive>/VST2 Plugins` on the first drive that has that folder (the internal drives first, then every
+   mounted `/media/<drive>`: an external SSD, a USB stick or card; since 2026-11-26, before which an external drive was missed),
+   otherwise `/sdcard/Synths`, or the internal drive's Synths folder on Gen2; it prints the one it picks. The generated
    `INSTALL.md` says the same since 2026-11-22), carries over the files the user
-   added (the manifest's `user_data`, see `--user-data`), and swaps the new folder in.
+   added (the manifest's `user_data`, see `--user-data`), and swaps the new folder in. Copying onto an exFAT or FAT drive
+   prints no "can't preserve ownership" line per file any more (those drives have no owners); other copy errors still show
+   and still stop the install. A `VST2 Plugins` target gets no noexec warning (MPC OS 3.10.1+ remounts its drive exec).
    Then it puts back executable bits and symlinks from the package's `MODES` file (written by `release.py`): a zip unpacked
    on Windows, or copied file by file, loses both, and an engine that bundles binaries (yt-dlp, ffmpeg, a private Python) then fails.
 4. Backs up `MPC.settings` to `MPC.settings.bak-<so>-<date>`. `plugin_list.awk` (BusyBox awk) drops any entry with
@@ -136,7 +139,8 @@ Run on the device as root (`sh install.sh [-y] [-n] [-t <synths-dir>]`):
 6. Starts MPC.
 
 `uninstall.sh [-y] [-n] [-t <synths-dir>]` removes the `MPC.settings` entry and the plugin folder, keeping `user_data`. Without
-`-t` it looks for the folder where `install.sh` puts it: `<drive>/VST2 Plugins` on the same drives in the same order, then
+`-t` it looks for the folder where `install.sh` puts it: `<drive>/VST2 Plugins` on the same drives in the same order (external
+ones included), then
 `/sdcard/Synths`. When it finds no folder it says so and still exits 0 (issue #1037, 2026-11-19).
 
 Why MPC is stopped for the edit: it holds its settings in memory while it runs and saves them itself, so an edit made
