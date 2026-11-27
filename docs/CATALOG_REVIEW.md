@@ -94,6 +94,8 @@ it never approves, and a release can change after it ran, so item 9's re-check b
    **Run `tools/catalog_check.py <zip> --catalog` with the tools at current `main`, not the PR's base, and read the warnings.**
    "install.sh/uninstall.sh differs from this repo's current template" means the release was built with older tools. CI cannot
    catch it (`--require-portable` passes with warnings), and the author's "0 warnings" is only true for the day they ran it.
+   A script that matches a template kept in `tools/release/previous/` (docs/RELEASING.md) gives no warning: a maintainer decided
+   that older template still installs correctly, so don't ask for a rebuild for it.
    Ask for a rebuild unless you can show that the missing block is unreachable for this entry, and say why (#1013: the
    zip installed to `/sdcard/Synths` on 3.10.1+; #1016: `retire: []`, benign; 8X8/9X9 1.0.0: `uninstall.sh` left the folder).
    **Releases change after review.** A tag can be deleted and re-cut (8X8/9X9 1.0.0 became 1.0.1 on 2026-11-20, so the
