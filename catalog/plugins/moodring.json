@@ -1,0 +1,13 @@
+{
+  "id": "moodring",
+  "name": "MoodRing",
+  "author": "GreasyCratez",
+  "repo": "GreasyCratez/MoodRing",
+  "kind": "effect",
+  "license": "MIT",
+  "summary": "MOOD MKII-style wet channel and always-listening micro-looper sharing one stepped sample-rate clock (2k to 64k). Wet: reverb, delay, slip, freeze. Looper: env, tape, stretch, overdub. Hidden options, 16 dip switches, ramping, tap tempo, MPC-tempo sync and two preset slots. Every control sits on the pedal's own MIDI CC values.",
+  "style": "multi-fx",
+  "tags": ["looper", "reverb", "delay", "lofi", "pedal-style"],
+  "min_os": "3.10.1",
+  "screenshot": "https://raw.githubusercontent.com/GreasyCratez/MoodRing/v0.1.2/docs/screenshots/moodring.png"
+}
