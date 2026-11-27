@@ -1,0 +1,4 @@
+{ "id": "rack-95", "name": "Rack-95", "author": "Stephane Schmitz", "repo": "eldontyrellcorp/mpc-plugin-rack95",
+  "kind": "effect", "style": "multi-fx", "tags": ["reverb", "delay", "chorus", "flanger", "pitch-shifter", "rotary", "rack", "vintage"], "license": "GPL-3.0-only",
+  "summary": "A 1990s-style rack multi-effects unit: 33 single, series, parallel and dual configurations of reverb (hall, room, plate, reverse), delay (stereo, ping-pong, multi-tap), chorus, flanger, pitch shifter, rotary speaker and auto pan; 128 programs; a front panel with a backlit LCD. Akai MPC Plugin SDK; Gen1 and Gen2.",
+  "screenshot": "https://raw.githubusercontent.com/eldontyrellcorp/mpc-plugin-rack95/v1.0.0/preview/01_rack.png" }
