@@ -24,6 +24,18 @@ library runs the patch's saved script with `reapply`, which writes the drop-in o
 (after a firmware update it leaves MPC stock). Both drop-ins share the one restart. The Plugin Manager installs this patch together with
 the 16-pad patch on Gen2 (`also_installs` in `catalog/patches.json`), so no USB stick or SSH is needed.
 
+**Since 1.3.0, addin boot hooks.** Some addins keep state in `/run` that is not a drop-in, such as a helper service. An addin can
+name a boot script in its `addin.manifest`:
+
+```sh
+ADDIN_BOOT=link.sh
+```
+
+Once per boot, the library runs `sh <file> boot` from the addin's folder, with a clean environment and its output in
+`/tmp/addin-restore.log`. It runs in the detached child, before the restart if there is one. Only a plain file name in the addin's own
+folder is accepted (letters, digits, `.`, `_`, `-`; not starting with `.`). A hook should return quickly and start anything long-lived with
+`systemd-run`, since processes started from inside MPC end when MPC restarts.
+
 ## Updating
 
 Install over an older version replaces it in place (`status` says `old-patch` until then). The device script (`.lua`) and its signed
