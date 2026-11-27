@@ -64,5 +64,31 @@ check "both missing: both drop-ins, still one restart" '[ -e $DP ] && [ -e $CONF
 fresh; mkdir -p "$R/data/mpc-drumpad"; : > "$R/data/mpc-drumpad/MPC"; run
 check "16-pad half there (no saved script): left alone" '[ ! -e $DP ] && [ ! -e restarted ]'
 
+hook() {   # $1 addin, $2 manifest value, $3 write the script (yes/no)
+    mkdir -p "$R/data/mpc-addins/$1"; : > "$R/data/mpc-addins/$1/$1.so"
+    printf 'ADDIN_ID=%s\nADDIN_BOOT=%s\n' "$1" "$2" > "$R/data/mpc-addins/$1/addin.manifest"
+    [ "$3" = yes ] && printf '#!/bin/sh\n[ "$1" = boot ] || exit 3\necho "$(pwd)" > "$AR_ROOT/hook-%s"\n' "$1" > "$R/data/mpc-addins/$1/hook.sh"
+    return 0
+}
+
+fresh; hook a hook.sh yes; env_preload "/data/mpc-addins/a/a.so"; run
+check "boot hook, addins loaded: hook runs with boot from its folder, no restart" \
+  '[ "$(cat hook-a)" = "$R/data/mpc-addins/a" ] && [ ! -e restarted ] && [ "$(cat run/addin-restore-done)" = ok ] && grep -q "boot hook exit 0" tmp/addin-restore.log'
+
+fresh; hook a hook.sh yes; run
+check "boot hook and a missing addin: hook runs and one restart" '[ -e hook-a ] && [ -e restarted ] && [ -e $CONF ]'
+
+fresh; hook a '"hook.sh"' yes; env_preload "/data/mpc-addins/a/a.so"; run
+check "boot hook name in quotes" '[ -e hook-a ]'
+
+fresh; hook a ../b/hook.sh yes; hook b x yes; env_preload "/data/mpc-addins/a/a.so:/data/mpc-addins/b/b.so"; run
+check "boot hook with a path, or naming no file: not run" '[ ! -e hook-a ] && [ ! -e hook-b ] && grep -q "boot hook missing" tmp/addin-restore.log'
+
+fresh; hook a .hidden yes; env_preload "/data/mpc-addins/a/a.so"; run
+check "boot hook starting with a dot: not run" '[ ! -e hook-a ] && [ "$(cat run/addin-restore-done)" = ok ]'
+
+fresh; hook a hook.sh yes; echo ok > "$R/run/addin-restore-done"; run
+check "guard present: boot hook not run again" '[ ! -e hook-a ]'
+
 echo "$((n - fails))/$n passed"
 [ "$fails" = 0 ]

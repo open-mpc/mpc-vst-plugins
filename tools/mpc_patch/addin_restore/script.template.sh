@@ -21,7 +21,7 @@
 # Not affiliated with Akai Professional / inMusic.
 # Source: tools/mpc_patch/addin_restore (src/addin_restore.c; build.sh regenerates this script from script.template.sh).
 set -u
-VERSION=1.2.0
+VERSION=1.3.0
 ADDINS_DIR=/data/mpc-addins
 die() { echo "ERROR: $*" >&2; exit 1; }
 usage() { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }

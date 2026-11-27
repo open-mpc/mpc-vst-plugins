@@ -14,6 +14,9 @@
  *     a firmware update it leaves MPC stock). That script's checksum of the 130 MB MPC takes a moment, so it runs in the
  *     detached child, not on MPC's Lua thread.
  * If either wrote a drop-in, MPC restarts once (8 s after the check), so the user sees one restart after a reboot.
+ *  3. Since 1.3.0, addin boot hooks: an addin whose addin.manifest has ADDIN_BOOT=<file> (a plain file name in its own
+ *     folder) gets `sh <file> boot` run once per boot, in the detached child, before the restart (if there is one). For
+ *     work that lives in /run but is not a drop-in, e.g. a helper service (forcelink's USB surface daemon).
  *
  * Build: tools/mpc_patch/addin_restore/build.sh (aarch64 and armv7, glibc 2.31 floor). Host tests: build.sh test
  * (AR_TEST: the paths sit under $AR_ROOT, MPC's environment is read from $AR_ROOT/environ, no sleeping).
@@ -44,6 +47,7 @@ static void path(char *out, size_t n, const char *p) { snprintf(out, n, "%s%s", 
 #define DP_DIR     "/data/mpc-drumpad"
 #define DP_SCRIPT  DP_DIR "/mpc-drum-pad-patch.sh"
 #define DP_CONF    DROPIN_DIR "/94-mpc-drumpad.conf"
+#define MANIFEST   "addin.manifest"
 
 static void logmsg(const char *fmt, const char *a) {
     char p[300];
@@ -177,6 +181,81 @@ static int drumpad_reapply(void) {
     return ok;
 }
 
+/* ADDIN_BOOT=<file> from <dir>/addin.manifest (quotes allowed). Only a plain file name: letters, digits, '.', '_', '-',
+ * not starting with '.'. 1 when there is a valid one in out. */
+static int boot_hook_name(const char *dir, char *out, size_t n) {
+    char m[700];
+    snprintf(m, sizeof m, "%s/" MANIFEST, dir);
+    FILE *f = fopen(m, "r");
+    if (!f) return 0;
+    char line[512];
+    int found = 0;
+    while (!found && fgets(line, sizeof line, f)) {
+        if (strncmp(line, "ADDIN_BOOT=", 11)) continue;
+        char *v = line + 11;
+        size_t l = strcspn(v, "\r\n");
+        v[l] = 0;
+        if (l >= 2 && (v[0] == '"' || v[0] == '\'') && v[l - 1] == v[0]) { v[l - 1] = 0; v++; l -= 2; }
+        if (!l || l >= n || v[0] == '.') break;
+        int ok = 1;
+        for (size_t i = 0; i < l; i++) {
+            char c = v[i];
+            if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '.' || c == '_' || c == '-')) ok = 0;
+        }
+        if (ok) { memcpy(out, v, l + 1); found = 1; }
+        break;
+    }
+    fclose(f);
+    return found;
+}
+
+/* The addins that have a boot hook whose file exists. Paths are as seen here (under root in tests). */
+static int find_boot_hooks(char list[][700]) {
+    char d[300];
+    path(d, sizeof d, ADDINS);
+    DIR *top = opendir(d);
+    if (!top) return 0;
+    int n = 0;
+    struct dirent *e;
+    while (n < MAX_ADDINS && (e = readdir(top))) {
+        if (e->d_name[0] == '.') continue;
+        char sub[600], name[128];
+        snprintf(sub, sizeof sub, "%s/%s", d, e->d_name);
+        if (!boot_hook_name(sub, name, sizeof name)) continue;
+        int w = snprintf(list[n], 700, "%s/%s", sub, name);
+        if (w <= 0 || w >= 700) continue;
+        if (access(list[n], R_OK) != 0) { logmsg("boot hook missing: %s", list[n]); continue; }
+        n++;
+    }
+    closedir(top);
+    return n;
+}
+
+/* In the child: each hook as `sh <file> boot`, from its own folder, output to the log. */
+static void run_boot_hooks(char list[][700], int n) {
+    char log[300], cmd[1800], num[16];
+    path(log, sizeof log, LOG_FILE);
+    for (int i = 0; i < n; i++) {
+        char dir[700];
+        size_t l = strlen(list[i]);
+        if (l >= sizeof dir) continue;
+        memcpy(dir, list[i], l + 1);
+        char *slash = strrchr(dir, '/');
+        if (slash) *slash = 0;
+#ifdef AR_TEST
+        int w = snprintf(cmd, sizeof cmd, "cd '%s' && AR_ROOT='%s' sh '%s' boot >>'%s' 2>&1 </dev/null", dir, root, list[i], log);
+#else
+        int w = snprintf(cmd, sizeof cmd, "cd '%s' && env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin HOME=/root sh '%s' boot >>'%s' 2>&1 </dev/null",
+                 dir, list[i], log);
+#endif
+        if (w <= 0 || (size_t)w >= sizeof cmd) { logmsg("boot hook path too long: %s", list[i]); continue; }
+        logmsg("boot hook: %s", list[i]);
+        int rc = system(cmd);
+        snprintf(num, sizeof num, "%d", WIFEXITED(rc) ? WEXITSTATUS(rc) : -1);
+        logmsg("boot hook exit %s", num);
+    }
+}
+
 static void restart_mpc(time_t t0) {
 #ifdef AR_TEST
     (void)t0;
@@ -200,13 +279,15 @@ __attribute__((visibility("default"))) int addin_restore_check(void *L) {
     (void)r;
     root[0] = 0;
 #endif
-    logmsg("checking addins (1.2.0)", NULL);
+    logmsg("checking addins (1.3.0)", NULL);
     if (exists(GUARD)) { logmsg("guard file exists, already ran this boot", NULL); return 0; }
     time_t t0 = time(NULL);
     int addins = restore_addins();
     int dp = drumpad_wanted();
-    if (!addins && !dp) { put_file(GUARD, "ok\n"); return 0; }
-    put_file(GUARD, "restarting\n");
+    static char hooks[MAX_ADDINS][700];
+    int nh = find_boot_hooks(hooks);
+    if (!addins && !dp && !nh) { put_file(GUARD, "ok\n"); return 0; }
+    put_file(GUARD, (addins || dp) ? "restarting\n" : "ok\n");
 #ifdef AR_TEST
     int child = 0;   /* tests: in the foreground */
 #else
@@ -220,6 +301,7 @@ __attribute__((visibility("default"))) int addin_restore_check(void *L) {
     int child = 1;
 #endif
     if (dp) dp = drumpad_reapply();
+    if (nh) run_boot_hooks(hooks, nh);
     if (addins || dp) { logmsg("drop-in written, restarting MPC once", NULL); restart_mpc(t0); }
     else logmsg("nothing to restart for", NULL);
     if (child) _exit(0);
