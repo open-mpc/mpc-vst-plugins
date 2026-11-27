@@ -5,7 +5,7 @@
   "repo": "sttm/mpc-looper",
   "kind": "effect",
   "license": "MIT",
-  "summary": "Experimental four-loop stereo insert for MPC OS 3.10.1+. Disk-backed recording up to 32 bars, overdub, undo, tempo sync and Warp, per-loop stop timing, and separate WAV exports. Fixed audio caches; final revision and Gen2 are offline-only.",
+  "summary": "Four-loop live performance looper for MPC OS 3.10.1+. Beat/bar-quantized recording up to 32 bars, overdub, tempo sync with pitch-preserving Warp, grouped playback, per-loop stop modes, undo and separate WAV exports. Gen1/Gen2 builds; tested on MPC Key 61.",
   "style": "glitch-performance",
   "tags": [
     "looper",
