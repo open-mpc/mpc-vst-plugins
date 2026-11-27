@@ -26,6 +26,8 @@ MPC lists every plugin folder in a **`VST2 Plugins`** folder at the root of any 
 - **New to this?** [Install the Plugin Manager](https://open-mpc.github.io/install.html) (or [Getting started](docs/GETTING_STARTED.md)): put the **OpenMPC Plugin Manager VST** on a USB stick (one click
   in the installer app, or copy its folder yourself), add it to a track, and open the address it shows on your phone or computer:
   browse the catalog, install, update, move old installs and add ROMs from there, or on the MPC's own screen.
+  On 3.10.1 the **Plugin Manager App** is an alternative: a Plugin Manager tile in MENU, full screen, instead of a plugin on a
+  track (Gen1 and Gen2; install it from the catalog).
 - **Already have plugins installed** (with the installer, the Plugin Manager or a stick)? On 3.10.1 the plugin browser only lists
   plugins in `VST2 Plugins`. Your plugins and saved projects are fine; move them with one tap in the Plugin Manager 1.0, or with
   the installer app's **Move** button. Details in [Getting started](docs/GETTING_STARTED.md#already-have-plugins).
@@ -59,7 +61,8 @@ MPC lists every plugin folder in a **`VST2 Plugins`** folder at the root of any 
 - **Native pages**: knobs, faders, switches, buttons, option selectors, pop-up lists, live text readouts and your own artwork
   (any font, knob style or Inkscape drawing, baked into the page).
 - **Pages on the MPC Sample**, whose own UI shows no plugin pages: a page of the plugin's own on the Sample's screen, driven by
-  its keys, dial and knobs (`vst.json` `"sample_page"`; needs the mpc-addin-sample-draw-handler addin). [docs/PORTING.md](docs/PORTING.md)
+  its keys, dial and knobs (`vst.json` `"sample_page"`; needs the mpc-addin-sample-draw-handler addin). On Sample 1.4 an effect
+  is a Knob FX with six parameters on the knobs (`"knob_fx"`). [docs/PORTING.md](docs/PORTING.md)
 - **Ports for the desktop**: the same port as a VST3 for local use in a DAW, showing its MPC skin. [docs/DESKTOP_VST3.md](docs/DESKTOP_VST3.md)
 
 ## The workflow
@@ -106,6 +109,7 @@ Emulator and firmware ports (big.LITTLE pinning, ring buffers, PGO): [docs/EMULA
 |---|---|
 | **[Installer app](tools/desktop/README.md)** (Windows, Mac, Linux) | Connects over SSH, installs a batch of catalog plugins or your own zips with one MPC restart, backs up settings first, removes plugins, installs to SD/USB, runs device patches. |
 | **[Plugin Manager VST](https://github.com/open-mpc/plugin-manager)** | A plugin that browses the catalog and installs, updates and removes plugins on the MPC itself, with rollback. Gen1 and Gen2. |
+| **[Plugin Manager App](https://open-mpc.github.io/)** | The same manager as a full-screen MENU tile instead of a plugin on a track. MPC OS 3.10.1, Gen1 and Gen2. |
 | **`tools/mpc-store.sh`** | The same install, update, remove and sync from a shell on the device. |
 | **USB stick, no SSH** | [docs/USB_STICK.md](docs/USB_STICK.md) (Gen1/Force), [docs/GEN2.md](docs/GEN2.md) (Gen2). |
 | **Release zip** | Each zip carries its own `install.sh`, `uninstall.sh` and `INSTALL.md`. [Install guide](https://open-mpc.github.io/install.html) |
