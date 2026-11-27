@@ -1,0 +1,16 @@
+{
+ "id": "schwung-junologue-chorus",
+ "name": "Junologue Chorus",
+ "author": "Peter Allwin",
+ "repo": "michaelmenesescs/mpc-schwung-ports",
+ "kind": "effect",
+ "license": "MIT",
+ "summary": "Juno-60 chorus emulation: the two classic BBD modes with mix and brightness, for the 80s stereo shimmer on pads, strings and anything that needs width.",
+ "style": "modulation",
+ "tags": [
+  "chorus",
+  "juno"
+ ],
+ "asset_pattern": "Junologue-Chorus-*-mpc-armv7.zip",
+ "collection": "schwung-ports"
+}

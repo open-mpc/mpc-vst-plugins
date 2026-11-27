@@ -13,5 +13,6 @@
   "license": "MIT",
   "summary": "Learn-the-noise spectral de-noiser: Learn, Threshold, Reduction, 6 nodes, Pass and Diff. Gen2 only.",
   "asset_pattern": "Shhhhh-*-mpc-aarch64.zip",
-  "collection": "poli"
+  "collection": "poli",
+  "screenshot": "https://raw.githubusercontent.com/Adison-Negron/Poli-Plugins/a56e2fee38fc085e09e5dc89ca436387c89f4295/docs/screenshots/poli-shhhhh.png"
 }

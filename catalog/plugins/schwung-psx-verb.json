@@ -1,0 +1,16 @@
+{
+ "id": "schwung-psx-verb",
+ "name": "PSX Verb",
+ "author": "charlesvestal",
+ "repo": "michaelmenesescs/mpc-schwung-ports",
+ "kind": "effect",
+ "license": "MIT",
+ "summary": "PlayStation 1 SPU reverb emulation: model, decay, reverb level, input and mix over the console's own comb and allpass structure, grainy character intact.",
+ "style": "reverb",
+ "tags": [
+  "reverb",
+  "playstation"
+ ],
+ "asset_pattern": "PSX-Verb-*-mpc-armv7.zip",
+ "collection": "schwung-ports"
+}

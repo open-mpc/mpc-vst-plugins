@@ -1,0 +1,16 @@
+{
+ "id": "schwung-midiverb",
+ "name": "Midiverb",
+ "author": "charlesvestal",
+ "repo": "michaelmenesescs/mpc-schwung-ports",
+ "kind": "effect",
+ "license": "GPL-3.0-only",
+ "summary": "Alesis Midiverb, Midifex and Midiverb II emulator, running the units' own programs on a cycle-accurate DASP interpreter at 23.4 kHz. Needs your own EPROM dumps: no ROMs are included - put midiverb.rom, midifex.rom and midiverb2.rom in the plugin's roms folder; a unit without its ROM passes audio through.",
+ "style": "reverb",
+ "tags": [
+  "midiverb",
+  "reverb"
+ ],
+ "asset_pattern": "Midiverb-*-mpc-armv7.zip",
+ "collection": "schwung-ports"
+}

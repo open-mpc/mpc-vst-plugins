@@ -1,0 +1,16 @@
+{
+ "id": "schwung-tapedelay",
+ "name": "TapeDelay",
+ "author": "cyrusasfa",
+ "repo": "michaelmenesescs/mpc-schwung-ports",
+ "kind": "effect",
+ "license": "MIT",
+ "summary": "Tape delay with flutter, tone shaping, stereo width and tempo divisions. A Space-Echo style design by cyrusasfa, ported to the Schwung platform by charlesvestal.",
+ "style": "delay",
+ "tags": [
+  "delay",
+  "tape"
+ ],
+ "asset_pattern": "TapeDelay-*-mpc-armv7.zip",
+ "collection": "schwung-ports"
+}

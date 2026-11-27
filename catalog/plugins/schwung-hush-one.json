@@ -1,0 +1,17 @@
+{
+ "id": "schwung-hush-one",
+ "name": "HUSH ONE",
+ "author": "charlesvestal",
+ "repo": "michaelmenesescs/mpc-schwung-ports",
+ "kind": "instrument",
+ "license": "MIT",
+ "summary": "Monophonic subtractive bass synth modelled on the SH-101: saw, pulse with PWM and sub, noise, resonant filter with its own envelope, LFO, glide, 11 presets and the original's gate and velocity quirks.",
+ "style": "mono-bass",
+ "tags": [
+  "mono",
+  "bass",
+  "sh-101"
+ ],
+ "asset_pattern": "HUSH-ONE-*-mpc-armv7.zip",
+ "collection": "schwung-ports"
+}

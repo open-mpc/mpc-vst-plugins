@@ -1,0 +1,14 @@
+{
+  "id": "demo-free-listing",
+  "name": "Demo Free Listing",
+  "author": "Example Audio",
+  "kind": "effect",
+  "source": "closed",
+  "price": "Free",
+  "shop_url": "https://example.com/demo-free-listing",
+  "summary": "Free plugins are welcome in Other sources too. If your plugin is free but closed source, list it here with a link to your page and no support contact is needed. Developers: copy this file into catalog/listings/, change the fields and open a PR. Demo only: example.com link, delete when the first real listing is added.",
+  "tags": [
+    "demo",
+    "example"
+  ]
+}
