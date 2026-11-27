@@ -35,6 +35,7 @@ disagree, the doc wins: tell the user so they can fix the skill.
    SHA-256 against the PR, and run `python3 tools/catalog_check.py <zip> --catalog` from a worktree at **current `main`**: read
    the warnings (an installer older than the template is a rebuild, doc item 9). If a zip 404s, the release was probably re-cut
    (8X8/9X9 1.0.0 became 1.0.1): list the repo's tags with `git ls-remote --tags` and review the release that exists now.
+   Don't ask a port's upstream author to confirm the listing when their licence allows redistribution (doc item 8).
    If the plugin repo has several registry entries, read its `tested.json`: records need `id`, and a device claim in the PR
    has to be in the file (doc item 15).
 4. **Verdict:** one of

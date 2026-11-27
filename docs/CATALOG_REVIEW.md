@@ -78,6 +78,14 @@ it never approves, and a release can change after it ran, so item 9's re-check b
 ### B. Who and what (tier 2)
 8. **`repo` and `author`:** the repo exists and is public, and the PR author owns it, belongs to its organisation, or is
    named in its README. If someone lists another person's plugin, ask the owner on the plugin repo before merging.
+   **Exception, a port of someone else's open-source plugin** (compiled from their published source): the upstream author's
+   confirmation is not needed when their licence allows redistribution (item 12: an SPDX open licence on the list in
+   `catalog_build.py`, the licence text shipped in the zip, the source of the binary published). Don't ask for it. Ask only
+   when the licence is non-OSI or unclear (that goes to a maintainer: "Licence doubt"), or when the upstream author asks to
+   be left out (a delisting request). The port's author still lists the upstream author in `author`, and the zip keeps
+   their licence and notices (item 14).
+   `author` is the name the person wants shown on the card. It's a name, not a description of the port (#448). If it's a
+   real name or differs from the repo owner, confirm it with them, because it will be public (#74, #707, #893).
 9. **A release exists:** the repo's latest release has an asset matching `asset_pattern` (for example
    `*-mpc-aarch64.zip`), built with `release.py` (it carries `mpc-plugin.json`). The scheduled catalog build validates it
    after merge; a release that fails shows as an issue on this repo, so a missing release just means the card stays empty.
