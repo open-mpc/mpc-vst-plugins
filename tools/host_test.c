@@ -2,7 +2,8 @@
  * (and its adapter) and the port's generated params.h -- tools/test_port.sh does all that -- and run
  * under ASan. Checks two independent instances, names/display and effCanBeAutomated for every param, a set/get round
  * trip, option selection, popup open/close, note -> audio, chunk save/restore, step_of on an option list and, with
- * HAS_TRANSPORT, play/stop/jump-back (poc/steptest); the state chunk size limit (STATE_MAX, poc/chunktest). Exit 1 on failure. */
+ * HAS_TRANSPORT, play/stop/jump-back (poc/steptest); the state chunk size limit (STATE_MAX, poc/chunktest); the opt-in
+ * wrapper options and the engine table's retry (poc/wrapopts). Exit 1 on failure. */
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -330,6 +331,49 @@ static void selfset_tests(void) {
 }
 #endif
 
+#ifdef WRAPOPTS_PROBE
+/* poc/wrapopts: the wrapper's opt-in options, all on (vst.json "defines"), and the engine table asked again after a NULL.
+ * The engine's counters and lit flags are read and set here directly. */
+extern volatile int wrapopts_taps, wrapopts_lit, wrapopts_changed_calls, wrapopts_engine_calls;
+static void wrapopts_first_call(void) {   /* before any instance: the engine answers NULL to its first mpc_engine() */
+    AEffect *none = VSTPluginMain(host);   /* once: CHECK evaluates its condition twice */
+    CHECK(!none && wrapopts_engine_calls == 1, "engine table: a NULL from mpc_engine() makes no instance");
+}
+static void wrapopts_tests(void) {
+    int ch = find_param("chan"), bt = find_param("btn"), ph = find_param("ph_1"), l1 = find_param("lt_1"), l2 = find_param("lt_2");
+    if (ch < 0 || bt < 0 || ph < 0 || l1 < 0 || l2 < 0) { printf("warn WRAPOPTS_PROBE without chan, btn, ph_1, lt_1 and lt_2: not tested\n"); return; }
+    CHECK(wrapopts_engine_calls == 2, "engine table: asked again after the NULL, then kept (%d calls of mpc_engine())", wrapopts_engine_calls);
+    AEffect *c = VSTPluginMain(host);
+    char d[64];
+    run(c, 40);                                  /* the first polls and their held UpdateDisplay */
+    /* OPTION_ANSWER_INDEX: the engine answers "8" for the label "9"; read as the index, not as the label "8" */
+    c->setP(c, ch, 0); run(c, 2);                /* from below: a set between options settles toward the move */
+    c->setP(c, ch, 8.0f / 15); run(c, 2); d[0] = 0; c->d(c, 7, ch, 0, d, 0);
+    CHECK(!strcmp(d, "9") && fabsf(c->getP(c, ch) - 8.0f / 15) < 1e-3f,
+          "OPTION_ANSWER_INDEX: an option answered by its index reads back as that index (\"%s\", %.3f)", d, c->getP(c, ch));
+    /* ECHO_GUARD_POLLED_ONLY: an unpolled tile that never lights is read back as 0, so MPC sends 1 at every touch */
+    wrapopts_taps = 0;
+    for (int k = 0; k < 3; k++) { c->setP(c, bt, 1.0f); run(c, 2); }
+    CHECK(wrapopts_taps == 3, "ECHO_GUARD_POLLED_ONLY: three touches of an unpolled tile reach the engine three times (%d)", wrapopts_taps);
+    /* ON_NO_UPDATE_PREFIX: a tile whose key has the prefix reports its lit state by automate alone */
+    run(c, 40); memset(automated, 0, sizeof automated); updates = 0;
+    wrapopts_lit = 1; run(c, 40);               /* 5120 frames: past the 100 ms an UpdateDisplay would be held */
+    CHECK(automated[ph] >= 1 && !updates, "ON_NO_UPDATE_PREFIX: ph_1 lit, reported by automate (%d) with no UpdateDisplay (%d)",
+          automated[ph], updates);
+    /* LIT_UPDATE_ON_TEXT_POLL: two tiles lit together are reported at once and cost one UpdateDisplay, 100 ms after the first */
+    memset(automated, 0, sizeof automated); updates = 0;
+    wrapopts_lit = 1 | 2 | 4; run(c, 8);        /* 1024 frames: every tile polled (each every 10 ms), the 100 ms not over */
+    CHECK(automated[l1] >= 1 && automated[l2] >= 1 && !updates,
+          "LIT_UPDATE_ON_TEXT_POLL: lt_1 and lt_2 lit, both reported at once (%d, %d), their UpdateDisplay held (%d)",
+          automated[l1], automated[l2], updates);
+    run(c, 40);
+    CHECK(updates == 1, "LIT_UPDATE_ON_TEXT_POLL: then one UpdateDisplay for both (%d)", updates);
+    /* NO_ENGINE_CHANGED: the hook is left out, though the engine defines it */
+    CHECK(!wrapopts_changed_calls, "NO_ENGINE_CHANGED: the engine's mpc_engine_changed never called (%d)", wrapopts_changed_calls);
+    c->d(c, 1, 0, 0, 0, 0);
+}
+#endif
+
 /* Two threads, as a JUCE host drives a plugin: parameter sets/reads and display text on one, audio on the other. The
  * wrapper runs one engine call at a time (vst2_wrap.c eng_set()); an engine that is unsafe without that crashes here. */
 static AEffect *g_two;
@@ -486,6 +530,9 @@ static void poll_tests(AEffect *a) {
 #endif
 
 int main(void) {
+#ifdef WRAPOPTS_PROBE
+    wrapopts_first_call();
+#endif
     AEffect *a = VSTPluginMain(host), *b = VSTPluginMain(host);
     CHECK(a && b && a != b, "two instances");
     if (!a || !b) return 1;
@@ -698,6 +745,9 @@ int main(void) {
     cc_tests(a);
 #ifdef SELFSET_PROBE
     selfset_tests();
+#endif
+#ifdef WRAPOPTS_PROBE
+    wrapopts_tests();
 #endif
     two_thread_tests(a);
     a->d(a, 1, 0, 0, 0, 0); b->d(b, 1, 0, 0, 0, 0);

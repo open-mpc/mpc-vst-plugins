@@ -1,0 +1,26 @@
+{
+ "name": "MPC Wrapper Options Test",
+ "vendor": "sd88me",
+ "uid": "WrpO",
+ "version": 1000,
+ "so": "wrapopts.so",
+ "params": "params.json",
+ "defines": {
+  "WRAPOPTS_PROBE": 1,
+  "ON_NO_UPDATE_PREFIX": "\"ph_\"",
+  "LIT_UPDATE_ON_TEXT_POLL": 1,
+  "ECHO_GUARD_POLLED_ONLY": 1,
+  "OPTION_ANSWER_INDEX": 1,
+  "NO_ENGINE_CHANGED": 1
+ },
+ "build": {
+  "root": "../..",
+  "sources": [
+   "poc/wrapopts/engine.c"
+  ],
+  "cflags": [],
+  "libs": [
+   "-lm"
+  ]
+ }
+}
