@@ -1,0 +1,18 @@
+{
+  "id": "ondes",
+  "name": "Ondes",
+  "author": "krimple",
+  "repo": "krimple/mpc-vst-ondes",
+  "kind": "instrument",
+  "style": "mono-bass",
+  "tags": [
+    "ondes-martenot",
+    "monosynth",
+    "polysynth",
+    "ribbon",
+    "vintage"
+  ],
+  "license": "GPL-3.0-or-later",
+  "summary": "Ondes Martenot-style instrument for MPC OS 3.x: eight combinable timbres, an intensity key (pedal, aftertouch or velocity), ribbon mode with hold for the touch strip, hand vibrato, transposition buttons, Legato/Mono/Poly voices and presets in the PRESET field. Tested on an MPC Key 61 (MPC OS 3.10.1).",
+  "screenshot": "https://raw.githubusercontent.com/krimple/mpc-vst-ondes/ondes-v0.5.0/docs/screenshots/ondes-sound.png"
+}

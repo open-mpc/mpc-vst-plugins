@@ -13,5 +13,6 @@
   "license": "MIT",
   "summary": "De-esser: dynamic sibilance suppressor for vocals, with presets. Gen2 only.",
   "asset_pattern": "Poli-Ess-*-mpc-aarch64.zip",
-  "collection": "poli"
+  "collection": "poli",
+  "screenshot": "https://raw.githubusercontent.com/Adison-Negron/Poli-Plugins/a56e2fee38fc085e09e5dc89ca436387c89f4295/docs/screenshots/poli-ess.png"
 }

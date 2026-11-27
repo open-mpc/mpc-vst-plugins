@@ -13,5 +13,6 @@
   "license": "MIT",
   "summary": "Stereo reverb with 14 spaces, tempo-synced pre-delay, reflection probability and 101 presets. Gen2 only.",
   "asset_pattern": "Poli-verb-*-mpc-aarch64.zip",
-  "collection": "poli"
+  "collection": "poli",
+  "screenshot": "https://raw.githubusercontent.com/Adison-Negron/Poli-Plugins/a56e2fee38fc085e09e5dc89ca436387c89f4295/docs/screenshots/poli-verb.png"
 }

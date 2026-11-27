@@ -1,0 +1,12 @@
+{
+  "id": "md-glitch",
+  "name": "MD Glitch",
+  "author": "Lichthaus",
+  "repo": "lichthaus/mpc-vst-md-glitch",
+  "kind": "effect",
+  "style": "lofi-tape",
+  "tags": ["lo-fi", "glitch", "codec", "stutter", "digital"],
+  "license": "MIT",
+  "summary": "A failing portable disc recorder: a low-bitrate transform codec with up to eight re-encodes, an anti-skip buffer that stutters, drops out and jumps (Bump and Freeze keys), and a digital input with clock slips and bit errors. Live display skin. Gens 6-8 add up to 46 ms of latency, best on playback tracks.",
+  "screenshot": "https://raw.githubusercontent.com/lichthaus/mpc-vst-md-glitch/v0.2.4/docs/screenshot.png"
+}

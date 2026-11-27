@@ -13,5 +13,6 @@
   "license": "MIT",
   "summary": "One-knob build-up effect: turn Wow up for risers, sweeps and tails. Gen2 only.",
   "asset_pattern": "Poliwow-*-mpc-aarch64.zip",
-  "collection": "poli"
+  "collection": "poli",
+  "screenshot": "https://raw.githubusercontent.com/Adison-Negron/Poli-Plugins/a56e2fee38fc085e09e5dc89ca436387c89f4295/docs/screenshots/poliwow.png"
 }

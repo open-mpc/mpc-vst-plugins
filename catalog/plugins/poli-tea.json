@@ -13,5 +13,6 @@
   "license": "MIT",
   "summary": "Master bus processor: saturation, 3-band multiband compression, stereo widening and an adaptive true-peak limiter, with 56 presets. Gen2 only.",
   "asset_pattern": "Poli-tea-*-mpc-aarch64.zip",
-  "collection": "poli"
+  "collection": "poli",
+  "screenshot": "https://raw.githubusercontent.com/Adison-Negron/Poli-Plugins/a56e2fee38fc085e09e5dc89ca436387c89f4295/docs/screenshots/poli-tea.png"
 }
