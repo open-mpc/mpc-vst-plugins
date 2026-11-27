@@ -92,7 +92,8 @@ for the pattern). This applies to every future port, not just ones that hit the 
       its first touch only. `"ECHO_GUARD_POLLED_ONLY": 1` keeps the guard to polled tiles. Off by default.
 - [ ] Optional, an engine that answers every option param with its index while some labels are numbers ("1".."16"):
       since #859 an exact label wins, so the answer "9" reads as the label "9", index 8. `"OPTION_ANSWER_INDEX": 1` takes a
-      fully numeric answer as the index first, as before #859. Off by default (VST2 wrapper only).
+      fully numeric answer as the index first, as before #859. Off by default (VST2 wrapper only). `poc/wrapopts` is the
+      test port for these five options: `tools/host_test.c` checks each, and each check fails with its option off.
 - [ ] Never hardcode `/sdcard/...` in an engine. Set `"defines": {"MODULE_SUBDIR": "\"engine\""}` in vst.json and
       the wrapper passes `<dir of the .so>/engine` to `create()`, found at runtime with `dladdr` (`wrapper/plugin_dir.h`,
       also usable directly via `mpc_plugin_dir()`), so the plugin works from `/sdcard/Synths`, `/media/*/Synths` or anywhere

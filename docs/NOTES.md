@@ -3174,3 +3174,9 @@ State left on the stick: `autorun.sh` (T1 tag) and one `AUTORUN_MARKER_T1-root-d
 - Offline: `tools/test_port.sh` PASSED with Cadenza's `vst.json` (all five on; its engine's ALSA port needs the LeakSanitizer
   suppression Cadenza's own tests use, `leak:alsa_open`) and with `poc/steptest`, `poc/polltest` and `poc/selfset` (all off).
   `vst3_wrap.c` is unchanged: the options answer MPC's VST2 host.
+- 2026-11-27, after review (offline only): `poc/wrapopts` turns all five on and `tools/host_test.c` checks each; with each
+  option removed in turn, its check fails. Without `ECHO_GUARD_POLLED_ONLY`, one touch in three of an unpolled tile that
+  never lights reaches the engine: the guard drops the others, in any port with such tiles. `ON_NO_UPDATE_PREFIX` must be
+  a C string literal (`"\"ph_\""` in `vst.json`); the build now fails otherwise. The engine table is set under a mutex
+  rather than `pthread_once`, so that a NULL from `mpc_engine()` is asked again at the next `VSTPluginMain`, as before;
+  `poc/wrapopts` checks both.
