@@ -598,7 +598,7 @@ static void render_events(wrap_t *w, float **out, int32_t n, int accumulate) {
 #endif
 
 static void lit_hold(wrap_t *w) {   /* LIT_UPDATE_ON_TEXT_POLL (not with DISPLAY_REV_THREAD: not atomic) */
-    if (!w->lit_pending) { w->lit_pending = 1; w->lit_wait = 4410; }
+    if (!w->lit_pending) { w->lit_pending = 1; w->lit_wait = 4410; }   /* 100 ms at the contract's 44100 Hz, as the polls count */
 }
 
 /* HAS_DISPLAY_REV: when the engine's "display_rev" moved, report every param whose value changed, so the host moves controls
@@ -676,8 +676,8 @@ static void housekeeping(AEffect *e, int32_t n) {
                 if (w->last_on[i] != on + 1) {
                     w->last_on[i] = (signed char)(on + 1);
                     w->master(&w->fx, audioMasterAutomate, i, 0, 0, (float)on);
-#ifdef ON_NO_UPDATE_PREFIX
-                    if (strncmp(PARAMS[i].key, ON_NO_UPDATE_PREFIX, sizeof ON_NO_UPDATE_PREFIX - 1))
+#ifdef ON_NO_UPDATE_PREFIX   /* "" ON_NO_UPDATE_PREFIX: a string literal or no build (vst.json: "\"ph_\"") */
+                    if (strncmp(PARAMS[i].key, "" ON_NO_UPDATE_PREFIX, sizeof "" ON_NO_UPDATE_PREFIX - 1))
 #endif
                     { if (LIT_UPDATE_ON_TEXT_POLL) lit_hold(w); else w->need_update_display = 1; }
                 }
