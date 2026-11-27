@@ -24,6 +24,17 @@ treat it as the next one up.
 
 Run it in order: the first items are mechanical and catch most problems.
 
+**Start from the automated pre-check.** `.github/workflows/catalog-precheck.yml` posts one comment on every PR that touches
+`catalog/` (and updates it on each push), made by `tools/catalog_precheck.py`. It does the mechanical half of items 1 to 7, 9, 12
+and 15 for each added or changed entry: the tier, the entry rules, a plain-ASCII summary, the screenshot (pinned to a tag or
+commit, the plugin's own repo, loads as an image), the newest release's zips (SHA-256 against the PR text,
+`catalog_check.py --catalog` with the tools at current `main`, files that look like ROMs or samples, the licence text in the
+zip against `license`), a "Tested on" claim against `tested.json`, and the registry check on the PR's files. Read it first: a
+`FAIL` or `CHECK` line is a point for the comment, a clean report still leaves the section at its end to you (names and
+branding, licence doubt, GPL source, trust fields, opening the screenshot). It runs for a fork's PR without a maintainer
+approving it (`pull_request_target`; it only reads the PR as data and never runs it), so it is there before you are. It informs;
+it never approves, and a release can change after it ran, so item 9's re-check before merging stays yours.
+
 ### A. Mechanics (tier 1 and 2)
 1. **CI is green.** The `build` check runs `tools/test_catalog.py` and the registry check. A red check is the author's to
    fix; quote the failing line from the log in your comment. Locally: `python3 tools/catalog_build.py --check-registry`.
@@ -67,8 +78,6 @@ Run it in order: the first items are mechanical and catch most problems.
 ### B. Who and what (tier 2)
 8. **`repo` and `author`:** the repo exists and is public, and the PR author owns it, belongs to its organisation, or is
    named in its README. If someone lists another person's plugin, ask the owner on the plugin repo before merging.
-   `author` is the name the person wants shown on the card. It's a name, not a description of the port (#448). If it's a
-   real name or differs from the repo owner, confirm it with them, because it will be public (#74, #707, #893).
 9. **A release exists:** the repo's latest release has an asset matching `asset_pattern` (for example
    `*-mpc-aarch64.zip`), built with `release.py` (it carries `mpc-plugin.json`). The scheduled catalog build validates it
    after merge; a release that fails shows as an issue on this repo, so a missing release just means the card stays empty.

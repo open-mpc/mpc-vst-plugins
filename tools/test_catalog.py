@@ -3827,5 +3827,241 @@ class MirrorTest(unittest.TestCase):
         self.assertTrue(os.path.isdir(os.path.join(self.out, ".git")), "a git checkout is left untouched")
 
 
+class PrecheckTest(Base):
+    """tools/catalog_precheck.py: the mechanical part of a catalog PR review, offline (a fake GitHub, no network)."""
+    def setUp(self):
+        super().setUp()
+        import catalog_precheck
+        self.pc = catalog_precheck
+
+    def entry(self, **kw):
+        e = {"id": "test-synth", "name": "Test Synth", "author": "Acme", "repo": "acme/test-synth", "kind": "instrument",
+             "license": "MIT", "summary": "A test synth.", "style": "polysynth", "tags": ["test"]}
+        e.update(kw)
+        return e
+
+    def fake_gh(self, zpath, tested=(), tags=("v1.0.0",), prerelease=False):
+        class GH:
+            def list_releases(_, repo):
+                return [{"tag_name": "v1.2.0", "prerelease": prerelease, "draft": False,
+                         "assets": [{"name": os.path.basename(zpath), "size": os.path.getsize(zpath),
+                                     "browser_download_url": "https://example.invalid/" + os.path.basename(zpath)}]}]
+
+            def list_tags(_, repo):
+                return [{"name": t, "sha": "0" * 40} for t in tags]
+
+            def tested(_, repo):
+                return list(tested)
+
+            def download(_, asset, dest):
+                shutil.copyfile(zpath, dest)
+        return GH()
+
+    @staticmethod
+    def probe_ok(url):
+        return 200, "image/png", 4096, (1280, 628)
+
+    def levels(self, rows):
+        return [l for l, _ in rows]
+
+    def test_tier_of_change(self):
+        t = self.pc.tier_of_change
+        e = self.entry()
+        self.assertEqual(t(None, e)[0], 2)
+        self.assertEqual(t(e, dict(e, screenshot="https://x"))[0], 1)
+        self.assertEqual(t(e, dict(e, summary="New text.", tags=["a"]))[0], 1)
+        self.assertEqual(t(e, dict(e, asset_pattern="*-mpc-aarch64.zip"))[0], 2)
+        self.assertEqual(t(e, dict(e, featured=True))[0], 3)
+        self.assertEqual(t(e, dict(e, author="Someone"))[0], 3)
+        self.assertEqual(t(e, dict(e, collection="c"))[0], 3)
+
+    def test_screenshot_pinning(self):
+        s = self.pc.screenshot_rows
+        own = {"acme/test-synth"}
+        raw = "https://raw.githubusercontent.com/acme/test-synth/%s/docs/a.png"
+        lv = lambda url, tags=None: self.levels(s(self.entry(screenshot=url), tags, self.probe_ok, own))
+        self.assertIn(self.pc.FAIL, lv(raw % "main"))
+        self.assertIn(self.pc.FAIL, lv("https://raw.githubusercontent.com/acme/test-synth/refs/heads/main/a.png"))
+        self.assertNotIn(self.pc.FAIL, lv(raw % ("a" * 40)))
+        self.assertNotIn(self.pc.CHECK, lv(raw % ("a" * 40)))
+        self.assertNotIn(self.pc.CHECK, lv(raw % "v1.0.0", {"v1.0.0"}))
+        self.assertIn(self.pc.CHECK, lv(raw % "v9.9.9", {"v1.0.0"}))
+        self.assertIn(self.pc.CHECK, lv("https://example.github.io/a.png"))
+        self.assertIn(self.pc.CHECK, lv("https://raw.githubusercontent.com/other/repo/%s/a.png" % ("b" * 40)))
+        self.assertEqual(self.levels(s(self.entry(), None, self.probe_ok, own)), [self.pc.NOTE])
+        bad = lambda url: (404, "", 0, None)
+        self.assertIn(self.pc.FAIL, self.levels(s(self.entry(screenshot=raw % ("a" * 40)), None, bad, own)))
+        html = lambda url: (200, "text/html", 10, None)
+        self.assertIn(self.pc.FAIL, self.levels(s(self.entry(screenshot=raw % ("a" * 40)), None, html, own)))
+
+    def test_licence_families_and_rows(self):
+        f = self.pc.license_families
+        self.assertEqual(f("GNU GENERAL PUBLIC LICENSE\nVersion 3, 29 June 2007"), {"GPL"})
+        self.assertEqual(f("GNU LESSER GENERAL PUBLIC LICENSE"), {"LGPL"})
+        self.assertEqual(f("MIT License\n\nPermission is hereby granted, free of charge, to any person"), {"MIT"})
+        self.assertEqual(self.pc.spdx_families("MIT AND GPL-3.0-only"), {"MIT", "GPL"})
+        mit = {"licences": {"x/LICENSE": {"MIT"}}, "suspicious": [], "skins": 1}
+        gpl = {"licences": {"x/LICENSE": {"GPL"}}, "suspicious": [], "skins": 1}
+        none = {"licences": {}, "suspicious": [], "skins": 1}
+        self.assertEqual(self.levels(self.pc.licence_rows(self.entry(license="MIT"), mit)), [self.pc.PASS])
+        self.assertEqual(self.levels(self.pc.licence_rows(self.entry(license="GPL-3.0-or-later"), gpl)), [self.pc.PASS])
+        self.assertEqual(self.levels(self.pc.licence_rows(self.entry(license="GPL-3.0-only"), mit)), [self.pc.CHECK])
+        self.assertEqual(self.levels(self.pc.licence_rows(self.entry(license="MIT"), none)), [self.pc.NOTE])
+        self.assertEqual(self.levels(self.pc.licence_rows(self.entry(license="GPL-3.0-only"), none)), [self.pc.CHECK])
+
+    def test_zip_scan_flags_roms_and_reads_licences_without_extracting(self):
+        z = os.path.join(self.tmp, "x.zip")
+        with zipfile.ZipFile(z, "w") as zf:
+            zf.writestr("P-1/portable/A/LICENSES/LICENSE", "MIT License\n\nPermission is hereby granted, free of charge, to")
+            zf.writestr("P-1/portable/A/roms/midiverb.rom", b"\0" * 16)
+            zf.writestr("P-1/portable/A/Plugin Skins/TUI.json", "{}")
+        scan = self.pc.zip_scan(z)
+        self.assertEqual([os.path.basename(n) for n in scan["suspicious"]], ["midiverb.rom"])
+        self.assertEqual(list(scan["licences"].values()), [{"MIT"}])
+        self.assertEqual(scan["skins"], 1)
+
+    def test_precheck_entry_new_entry_with_a_valid_release(self):
+        z = self.build()
+        e = self.entry(summary="A test synth. Tested on MPC Live II.", screenshot="https://raw.githubusercontent.com/acme/test-synth/v1.0.0/a.png")
+        gh = self.fake_gh(z, tested=[{"id": "test-synth", "version": "1.2.0", "device": "MPC Live II", "firmware": "3.10.1", "date": "2026-11-26"}])
+        with open(z, "rb") as f:
+            sha = __import__("hashlib").sha256(f.read()).hexdigest()
+        r = self.pc.precheck_entry(e, None, gh, self.tmp, self.probe_ok, "HEAD", {sha})
+        text = "\n".join(t for _, t in r["rows"])
+        self.assertEqual(r["tier"], 2)
+        self.assertNotIn(self.pc.FAIL, self.levels(r["rows"]), text)
+        self.assertIn("catalog_check.py --catalog` OK", text)
+        self.assertIn(sha, text)
+        self.assertIn("matches the PR text", text)
+        self.assertIn("record (MPC Live II 1.2.0)", text)
+
+    def test_precheck_entry_catches_a_testing_claim_without_a_record_and_a_bad_zip(self):
+        z = self.build()
+        e = self.entry(summary="A test synth. Tested on MPC Live II.")
+        r = self.pc.precheck_entry(e, None, self.fake_gh(z, tested=[]), self.tmp, self.probe_ok, "HEAD")
+        self.assertTrue(any("no record for `test-synth`" in t for _, t in r["rows"]), r["rows"])
+        junk = os.path.join(self.tmp, "Junk-1.0.0-mpc-armv7.zip")
+        with open(junk, "wb") as f:
+            f.write(b"not a zip")
+        r = self.pc.precheck_entry(self.entry(), None, self.fake_gh(junk), self.tmp, self.probe_ok, "HEAD")
+        self.assertIn(self.pc.FAIL, self.levels(r["rows"]))
+
+    def test_tier_one_update_does_not_download_the_release(self):
+        class NoNet:
+            def list_releases(_, repo):
+                raise AssertionError("a tier 1 update must not touch the releases")
+
+            def list_tags(_, repo):
+                return []
+
+            def tested(_, repo):
+                return []
+        old = self.entry()
+        new = self.entry(summary="A better summary.")
+        r = self.pc.precheck_entry(new, old, NoNet(), self.tmp, self.probe_ok, "HEAD")
+        self.assertEqual(r["tier"], 1)
+        self.assertTrue(any("not re-checked" in t for _, t in r["rows"]))
+
+    def test_tested_records_in_a_repo_with_several_entries_need_an_id(self):
+        rows = self.pc.tested_rows(self.entry(summary="Tested on MPC X."), [{"version": "1", "device": "MPC X"}], 3)
+        self.assertTrue(any(l == self.pc.CHECK for l, _ in rows), rows)
+        rows = self.pc.tested_rows(self.entry(summary="Tested on MPC X."), [{"version": "1", "device": "MPC X"}], 1)
+        self.assertEqual(self.levels(rows), [self.pc.PASS])
+        rows = self.pc.tested_rows(self.entry(summary="Works."), [], 1)
+        self.assertEqual(rows, [])
+
+    def git_repo(self, files_by_commit):
+        d = os.path.join(self.tmp, "repo")
+        os.makedirs(d, exist_ok=True)
+        run = lambda *a: subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", *a], cwd=d, check=True,
+                                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        run("init", "-q", "-b", "main")
+        tags = []
+        for i, files in enumerate(files_by_commit):
+            for path, content in files.items():
+                os.makedirs(os.path.dirname(os.path.join(d, path)), exist_ok=True)
+                if os.path.lexists(os.path.join(d, path)):
+                    os.remove(os.path.join(d, path))
+                if content is None:
+                    continue
+                if isinstance(content, tuple):          # ("symlink", target)
+                    os.symlink(content[1], os.path.join(d, path))
+                else:
+                    with open(os.path.join(d, path), "w") as f:
+                        f.write(content)
+            run("add", "-A")
+            run("commit", "-q", "-m", "c%d" % i)
+            run("tag", "c%d" % i)
+            tags.append("c%d" % i)
+        return d
+
+    def test_reads_the_pr_through_git_blobs_and_skips_symlinks(self):
+        d = self.git_repo([{"catalog/plugins/test-synth.json": json.dumps(self.entry())},
+                           {"catalog/plugins/test-synth.json": json.dumps(self.entry(summary="Changed.")),
+                            "catalog/plugins/link.json": ("symlink", "/etc/passwd"),
+                            "tools/x.py": "print(1)\n"}])
+        cwd = os.getcwd()
+        os.chdir(d)
+        try:
+            files = self.pc.diff_files("c0", "c1")
+            self.assertIn(("M", "catalog/plugins/test-synth.json"), files)
+            self.assertIn(("A", "catalog/plugins/link.json"), files)
+            self.assertEqual(self.pc.load_entry("c1", "catalog/plugins/test-synth.json")["summary"], "Changed.")
+            self.assertIsNone(self.pc.read_blob("c1", "catalog/plugins/link.json"))   # never followed
+            self.assertIsNone(self.pc.read_blob("c1", "catalog/plugins/missing.json"))
+            self.assertEqual(self.pc.repo_entry_count("c1", "acme/test-synth"), 1)
+        finally:
+            os.chdir(cwd)
+
+    def test_report_end_to_end_marks_tier_and_hands_the_rest_to_a_person(self):
+        d = self.git_repo([{"catalog/plugins/test-synth.json": json.dumps(self.entry(license="GPL-3.0-only"))},
+                           {"catalog/plugins/test-synth.json": json.dumps(self.entry(license="GPL-3.0-only", summary="New.")),
+                            "catalog/collections/c.json": "{}", "tools/x.py": "x\n", "catalog/yanked.json": "{}"}])
+        out = os.path.join(self.tmp, "report.md")
+        script = os.path.join(HERE, "catalog_precheck.py")
+        r = subprocess.run([sys.executable, script, "--base", "c0", "--head", "c1", "--out", out, "--registry-check"], cwd=d,
+                           capture_output=True, text=True, env=dict(os.environ, GITHUB_TOKEN=""))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        with open(out) as f:
+            report = f.read()
+        self.assertTrue(report.startswith("<!-- catalog-precheck -->"))
+        self.assertIn("tier 1, entry update (summary)", report)
+        self.assertIn("collection `c.json`", report)
+        self.assertIn("trust file `catalog/yanked.json`", report)
+        self.assertIn("outside catalog/: tier 4", report)
+        self.assertIn("is the complete source of the released binary published", report)   # GPL: a person checks
+        self.assertIn("### Registry check", report)
+
+    def test_workflow_never_runs_the_pr(self):
+        """catalog-precheck.yml is pull_request_target (a fork's PR gets it without approval): it must check out the base, only fetch
+        the PR as git objects, and keep PR text out of shell commands. Editing it to do otherwise hands a fork's PR a write token."""
+        path = os.path.join(HERE, "..", ".github", "workflows", "catalog-precheck.yml")
+        with open(path) as f:
+            lines = f.read().splitlines()
+        text = "\n".join(lines)
+        self.assertIn("pull_request_target:", text)
+        self.assertIn("ref: ${{ github.event.pull_request.base.sha }}", text)
+        for bad in ("pull_request.head.sha", "pull_request.head.ref", "github.head_ref", "github.event.pull_request.title",
+                    "actions/github-script", "npm ", "pip install", "make ", "bash tools/", "sh tools/"):
+            self.assertNotIn(bad, text.replace("# ", ""), "the pre-check workflow must not use " + bad)
+        in_run, indent = False, 0
+        for ln in lines:
+            stripped = ln.lstrip()
+            cur = len(ln) - len(stripped)
+            if in_run and stripped and cur <= indent:
+                in_run = False
+            if in_run:
+                self.assertNotIn("${{", ln, "an expression inside a run: block is shell injection: use env: " + ln.strip())
+            if re.match(r"run:\s*[|>]", stripped):
+                in_run, indent = True, cur
+            elif stripped.startswith("run:") and not stripped.startswith("run: |"):
+                self.assertNotIn("${{", ln)
+        # only the PR's data is fetched, and only as a ref: nothing is checked out from it
+        self.assertEqual(text.count("git fetch"), 1)
+        self.assertIn("refs/pull/${PR}/head", text)
+        self.assertNotIn("git checkout", text)
+        self.assertNotIn("git merge", text)
+
+
 if __name__ == "__main__":
     unittest.main()

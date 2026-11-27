@@ -1,0 +1,63 @@
+# Pre-check of a catalog PR, posted as one comment that is updated on every push (docs/CATALOG_REVIEW.md, "Automated pre-check").
+#
+# pull_request_target, so it also runs for a fork's PR without a maintainer approving the run first (the `build` job in catalog.yml
+# runs the PR's own code and still waits for approval from a first-time contributor). That is safe only because of these rules,
+# which anyone editing this file must keep:
+#   1. Check out the BASE commit, never the PR's: the tools that run are the ones already merged.
+#   2. The PR is only fetched as git objects. tools/catalog_precheck.py reads its files with `git cat-file` (symlinks skipped),
+#      parses them as JSON, and never executes, imports or builds anything from the PR or from a downloaded release zip.
+#   3. Nothing from the PR (title, branch, body) is put into a shell command: it goes through env variables and files.
+#   4. The token only reads the repository and writes comments.
+# The report informs; this job never fails a PR, and nothing in it is an approval.
+name: Catalog pre-check
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths: ['catalog/**']
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write   # a PR's comments are issue comments
+concurrency:
+  group: catalog-precheck-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  precheck:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out this repo as merged (the base, not the PR)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0              # the merge base of a PR that is behind main is needed for its own diff
+          persist-credentials: false
+      - name: Fetch the PR as git objects only
+        env:
+          PR: ${{ github.event.pull_request.number }}
+        run: git fetch --no-tags origin "+refs/pull/${PR}/head:refs/precheck/head"
+      - name: Pre-check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.txt"
+          python3 tools/catalog_precheck.py --base "$BASE_SHA" --head refs/precheck/head \
+            --body "$RUNNER_TEMP/pr-body.txt" --registry-check --out "$RUNNER_TEMP/precheck.md"
+          cat "$RUNNER_TEMP/precheck.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Post or update the comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          # Only the bot's own earlier comment counts: a contributor who pastes the marker cannot redirect the update.
+          id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq '[.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- catalog-precheck -->"))) | .id] | first // empty')
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body="@$RUNNER_TEMP/precheck.md" >/dev/null
+          else
+            gh api -X POST "repos/$REPO/issues/$PR/comments" -F body="@$RUNNER_TEMP/precheck.md" >/dev/null
+          fi
