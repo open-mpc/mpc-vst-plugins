@@ -508,6 +508,56 @@ class CatalogTest(Base):
         self.assertEqual(e, [])
         self.assertTrue(any("install.sh differs" in x for x in w))
 
+    def zip_with_installer_suffix(self, z, script, suffix):
+        """A copy of release zip z whose install.sh/uninstall.sh ends with suffix, SHA256SUMS kept consistent."""
+        import hashlib
+        z = self.tamper(z, "/" + script, lambda d: d + suffix)
+        with zipfile.ZipFile(z) as zf:
+            digest = hashlib.sha256([zf.read(n) for n in zf.namelist() if n.endswith("/" + script)][0]).hexdigest()
+        def fix(d):
+            return "\n".join(("%s  %s" % (digest, script)) if l.endswith("  " + script) else l for l in d.decode().splitlines()).encode() + b"\n"
+        return self.tamper(z, "/SHA256SUMS", fix)
+
+    def test_an_installer_matching_a_previous_template_is_accepted(self):
+        """tools/release/previous/<date>/: templates a maintainer retained when a template changed, so a release built before the change
+        needs no rebuild. Other drift still warns, and a previous set that lacks a script does not excuse that script."""
+        old = b"\n# an older template\n"
+        z = self.zip_with_installer_suffix(self.build(), "install.sh", old)
+        saved = catalog_check.PREVIOUS_TEMPLATES
+        try:
+            e, w, _ = catalog_check.check(z)
+            self.assertTrue(any("install.sh differs" in x for x in w), "no previous template yet: it warns")
+            prev = os.path.join(self.tmp, "previous")
+            os.makedirs(os.path.join(prev, "2026-01-01"))
+            with open(os.path.join(HERE, "release", "install.sh"), "rb") as f:
+                with open(os.path.join(prev, "2026-01-01", "install.sh"), "wb") as g:
+                    g.write(f.read() + old)
+            catalog_check.PREVIOUS_TEMPLATES = prev
+            e, w, _ = catalog_check.check(z)
+            self.assertEqual(e, [])
+            self.assertFalse(any("install.sh differs" in x for x in w), w)
+            z2 = self.zip_with_installer_suffix(z, "uninstall.sh", old)   # no previous uninstall.sh: still warns
+            e, w, _ = catalog_check.check(z2)
+            self.assertTrue(any("uninstall.sh differs" in x for x in w), w)
+            self.assertFalse(any("install.sh differs" in x for x in w if "uninstall" not in x), w)
+        finally:
+            catalog_check.PREVIOUS_TEMPLATES = saved
+
+    def test_shipped_previous_templates_are_templates(self):
+        """Every file under tools/release/previous/ is a placeholder template with LF line endings, like the current ones."""
+        root = catalog_check.PREVIOUS_TEMPLATES
+        found = 0
+        for d in sorted(os.listdir(root)):
+            for script in ("install.sh", "uninstall.sh"):
+                path = os.path.join(root, d, script)
+                if os.path.exists(path):
+                    found += 1
+                    with open(path, "rb") as f:
+                        data = f.read()
+                    self.assertIn(b"@SKIN@", data, path)
+                    self.assertEqual(data.count(b"\r"), 0, path)
+        self.assertGreaterEqual(found, 2)
+
     @staticmethod
     def _install(zf):
         return [zf.read(n) for n in zf.namelist() if n.endswith("/install.sh")][0]

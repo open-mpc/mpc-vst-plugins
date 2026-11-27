@@ -82,7 +82,8 @@ commit in both places, and **move the pin to the current `main` before every rel
 checks reach a release only through the pin. 8X8 and 9X9 1.0.0 were built at a pin from the day before and still shipped the old
 `uninstall.sh` (it left the plugin folder behind on MPC OS 3.10.1+, 2026-11-19), and `catalog_check.py` only warns about it.
 After the build, run `python3 tools/catalog_check.py <zip> --catalog` with `main` checked out: "install.sh differs from this
-repo's current template" means the zip predates a template change, so re-pin and rebuild:
+repo's current template" means the zip predates a template change, so re-pin and rebuild (unless the old template is kept under
+`tools/release/previous/`, below):
 ```yaml
 jobs:
   vst:
@@ -112,6 +113,17 @@ version that is already published. Publishing the draft creates the tag.
   `.so` (`DEST` is relative to the plugin folder).
 
 ## What the installer does
+**Changing an installer template (`tools/release/install.sh`, `uninstall.sh`, and the addin ones).** `catalog_check.py` compares a
+release's scripts with the current template and warns when they differ, so every published release would warn after the change.
+When the change is an improvement that only some installs need (an external drive, a message), and an older zip still installs and
+uninstalls correctly, keep the old template: copy the *previous* `install.sh` / `uninstall.sh` (addin scripts under `addin/`) into
+`tools/release/previous/<date>/` in the same PR, with the placeholders (`@NAME@`, ...) as they were. `catalog_check.py` then
+accepts a script that matches the current template or any file kept there. Do **not** keep a template that is wrong for installs it
+should handle (#1013: the zip installed to `/sdcard/Synths` on 3.10.1+; 8X8/9X9 1.0.0: `uninstall.sh` left the folder): leaving
+it out is what makes `catalog_check.py` ask for a rebuild. The choice is a maintainer's: `tools/release/` is reviewed by a code
+reviewer and a maintainer (docs/CATALOG_REVIEW.md, "Code review"). `tools/release/previous/2026-11-26/` holds the templates from
+before the external-drive change (#1218).
+
 Run on the device as root (`sh install.sh [-y] [-n] [-t <synths-dir>]`):
 1. Checks root, armv7, that `MPC.settings` exists and `SHA256SUMS`, and asks for confirmation.
 2. Stops MPC (`systemctl stop acvs`, or `inmusic-mpc` when the device has no `acvs` service, as on some MPC OS 2.x versions and on Hakai-enabled systems) and waits for it to exit. A trap restarts MPC on any error.

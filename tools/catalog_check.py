@@ -233,6 +233,19 @@ def addin_manifest_problems(am):
     return out
 
 
+PREVIOUS_TEMPLATES = os.path.join(HERE, "release", "previous")   # retired installer templates a maintainer still accepts (docs/RELEASING.md)
+
+
+def template_variants(script, addin=False):
+    """Paths of the templates a release's installer script may match: this repo's current one first, then the same script in each
+    tools/release/previous/<date>/ (addin scripts in .../addin/). Missing files are skipped; an empty list means no template to compare."""
+    sub = "addin" if addin else ""
+    out = [os.path.join(HERE, "release", sub, script)]
+    if os.path.isdir(PREVIOUS_TEMPLATES):
+        out += [os.path.join(PREVIOUS_TEMPLATES, d, sub, script) for d in sorted(os.listdir(PREVIOUS_TEMPLATES))]
+    return [p for p in out if os.path.exists(p)]
+
+
 def check(zpath, catalog=False, expect_id=None, expect_repo=None, require_portable=False):
     errors, warnings = [], []
     err, warn = errors.append, warnings.append
@@ -513,12 +526,15 @@ def check(zpath, catalog=False, expect_id=None, expect_repo=None, require_portab
            "@UID@": str(m.get("uid", "")), "@LEGACY_SO@": "/sdcard/vst/" + posixpath.basename(m["so"]), "@USER_DATA@": " ".join(m.get("user_data", [])),
            "@RETIRE@": ":".join(m.get("retire", [])), "@ID@": str(m.get("id", ""))}
     for script in ([] if legacy else list(ADDIN_SCRIPTS) if addin else ["install.sh", "uninstall.sh"]):
-        tpl = os.path.join(HERE, "release", "addin" if addin else "", script)
-        if os.path.exists(tpl) and script in files:
-            text = open(tpl).read()
-            for k, v in sub.items():
-                text = text.replace(k, v)
-            if text.encode() != files[script]:
+        tpls = template_variants(script, addin)
+        if tpls and script in files:
+            def rendered(tpl):
+                with open(tpl) as f:
+                    text = f.read()
+                for k, v in sub.items():
+                    text = text.replace(k, v)
+                return text.encode()
+            if not any(rendered(t) == files[script] for t in tpls):
                 warn("%s differs from this repo's current template (older release tool, or modified): review it" % script)
     canon = os.path.join(HERE, "release", "plugin_list.awk")
     if os.path.exists(canon) and "plugin_list.awk" in files and open(canon, "rb").read() != files["plugin_list.awk"]:
