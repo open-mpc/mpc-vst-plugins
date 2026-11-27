@@ -1047,11 +1047,14 @@ static intptr_t dispatcher(AEffect *e, int32_t op, int32_t idx, intptr_t v, void
     }
 }
 
-static pthread_once_t g_api_once = PTHREAD_ONCE_INIT;
-static void g_api_init(void) { g_api = mpc_engine(); }
+static pthread_mutex_t g_api_lock = PTHREAD_MUTEX_INITIALIZER;
 
 __attribute__((visibility("default"))) AEffect *VSTPluginMain(audioMasterCallback master) {
-    pthread_once(&g_api_once, g_api_init);   /* one engine table, also when two instances are created on two threads at once */
+    /* One engine table, also when two instances are created on two threads at once; a NULL from mpc_engine() is asked
+     * again at the next call, as before the lock */
+    pthread_mutex_lock(&g_api_lock);
+    if (!g_api) g_api = mpc_engine();
+    pthread_mutex_unlock(&g_api_lock);
     if (!g_api) return NULL;
 #ifdef PLUG_EFFECT
     if (!g_api->process) return NULL;   /* an effect port must provide process() */
