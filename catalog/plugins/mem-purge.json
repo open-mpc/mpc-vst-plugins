@@ -1,0 +1,12 @@
+{
+  "id": "mem-purge",
+  "name": "Mem Purge",
+  "author": "Lichthaus",
+  "repo": "lichthaus/mpc-vst-mem-purge",
+  "kind": "effect",
+  "style": "utility",
+  "tags": ["memory", "ram", "maintenance", "gen2"],
+  "license": "MIT",
+  "summary": "Frees the RAM that MPC OS 3.10.1 on Gen2 loses to plugin skin images left by earlier app starts (\"Low Memory!\" with few tracks, or crashes after many restarts), and raises the app's memory limit by what it freed, without a reboot. Load it on any track; audio passes through. Gen1 leaves no such files, so there it shows Nothing To Do.",
+  "screenshot": "https://raw.githubusercontent.com/lichthaus/mpc-vst-mem-purge/v0.1.0/docs/screenshot.png"
+}
