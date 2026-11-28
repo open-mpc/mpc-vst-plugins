@@ -1,0 +1,16 @@
+{
+  "id": "rate-bridge",
+  "name": "MPC Rate Bridge",
+  "author": "krimple",
+  "repo": "krimple/mpc-addin-rate-bridge",
+  "kind": "addin",
+  "style": "audio-interface",
+  "tags": [
+    "usb",
+    "audio-interface",
+    "recording",
+    "sample-rate"
+  ],
+  "license": "MIT",
+  "summary": "Use a USB audio interface that can't run at 44.1 kHz (a 48 kHz-only Quad Cortex mini, for one) as the MPC's audio device: the interface runs at its own rate and alsa-lib's rate converter sits in between. Pick it in Preferences > Audio; it then carries MPC's inputs and outputs. Tested on a Key 61 (Gen1, 3.10.1)."
+}
