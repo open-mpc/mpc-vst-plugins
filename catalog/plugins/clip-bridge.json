@@ -1,0 +1,19 @@
+{
+  "id": "clip-bridge",
+  "name": "MPC Clip Bridge",
+  "author": "Stampman3000",
+  "repo": "stampman3000-jpg/mpc-clip-bridge",
+  "kind": "addin",
+  "style": "utility",
+  "tags": [
+    "clips",
+    "socket",
+    "tracker",
+    "preload"
+  ],
+  "license": "MIT",
+  "min_os": "3.10.1",
+  "youtube": "https://youtu.be/pJdCz3IE0R4",
+  "summary": "LD_PRELOAD addin that exposes MPC clips over a local Unix socket (/run/mpc-ext.sock) so plugins like TrackBoy can read and write clips. Needs root SSH, writes a systemd drop-in, and restarts MPC. Verified on a Gen 1 MPC One (OS 3.10.1.12). Gen 2 packaged but untested. Original Force unsupported.",
+  "asset_pattern": "MPC-Clip-Bridge-*-mpc-armv7.zip"
+}
